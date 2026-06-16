@@ -1,0 +1,111 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Sign in — cerdikMY</PageTitle>
+
+<div class="auth-page">
+    <div class="auth-card">
+        <a href="/" class="auth-brand">cerdik<span class="brand-accent">MY</span></a>
+        <h1 class="auth-title">Sign in</h1>
+        <p class="auth-sub">Welcome back. Sign in to continue learning.</p>
+
+        <EditForm Model="_model" OnValidSubmit="SubmitAsync" FormName="login">
+            <DataAnnotationsValidator />
+
+            @if (_error is not null)
+            {
+                <div class="auth-error" role="alert">@_error</div>
+            }
+
+            <div class="field">
+                <label class="label" for="login-email">Email</label>
+                <InputText id="login-email" class="input" @bind-Value="_model.Email"
+                           autocomplete="email" aria-describedby="login-email-err" />
+                <ValidationMessage For="() => _model.Email" id="login-email-err" role="alert" />
+            </div>
+
+            <div class="field">
+                <label class="label" for="login-password">Password</label>
+                <InputText id="login-password" type="password" class="input" @bind-Value="_model.Password"
+                           autocomplete="current-password" aria-describedby="login-password-err" />
+                <ValidationMessage For="() => _model.Password" id="login-password-err" role="alert" />
+            </div>
+
+            <button type="submit" class="btn-primary w-full" disabled="@_busy">
+                @(_busy ? "Signing in…" : "Sign in")
+            </button>
+        </EditForm>
+
+        <p class="auth-foot">
+            New here? <a href="/register">Create a parent account</a>
+        </p>
+    </div>
+</div>
+
+<style>
+    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: linear-gradient(160deg, var(--brand-50), #fff); }
+    .auth-card { width: 100%; max-width: 26rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 30px -12px rgba(15,23,42,.25); }
+    .auth-brand { display: block; font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 1.25rem; }
+    .auth-title { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
+    .auth-sub { color: #64748b; margin-top: .25rem; margin-bottom: 1.25rem; }
+    .field { margin-bottom: 1rem; }
+    .auth-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: .6rem .75rem; border-radius: .5rem; font-size: .85rem; margin-bottom: 1rem; }
+    .auth-foot { margin-top: 1.25rem; font-size: .85rem; color: #64748b; text-align: center; }
+    .auth-foot a { color: var(--brand-600); font-weight: 600; }
+    .w-full { width: 100%; }
+</style>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private readonly LoginModel _model = new();
+    private bool _busy;
+    private string? _error;
+
+    private async Task SubmitAsync()
+    {
+        _error = null;
+        _busy = true;
+        try
+        {
+            await Auth.LoginAsync(_model.Email, _model.Password);
+            NavigatePostLogin();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.IsUnauthorized
+                ? "The email or password you entered is incorrect."
+                : ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't reach the server. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private void NavigatePostLogin()
+    {
+        if (!string.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.StartsWith('/'))
+        {
+            Nav.NavigateTo(ReturnUrl, forceLoad: false);
+            return;
+        }
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Enter a valid email address.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Password is required.")]
+        public string Password { get; set; } = "";
+    }
+}

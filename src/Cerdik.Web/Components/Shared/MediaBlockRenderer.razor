@@ -1,0 +1,100 @@
+@inject MarkdownService Markdown
+
+@* Renders a single lesson block, switching on LessonBlockType. *@
+@switch (Block.Type)
+{
+    case LessonBlockType.Text:
+    case LessonBlockType.WorkedExample:
+        <div class="lesson-block @(Block.Type == LessonBlockType.WorkedExample ? "worked-example" : "")">
+            @if (Block.Type == LessonBlockType.WorkedExample)
+            {
+                <p class="block-eyebrow">Worked example</p>
+            }
+            <div class="prose">@Markdown.ToMarkup(Block.Markdown)</div>
+        </div>
+        break;
+
+    case LessonBlockType.Callout:
+        <aside class="lesson-callout" role="note">
+            <span class="callout-icon" aria-hidden="true">💡</span>
+            <div class="prose">@Markdown.ToMarkup(Block.Markdown)</div>
+        </aside>
+        break;
+
+    case LessonBlockType.Image when Block.Media is not null:
+        <figure class="lesson-figure">
+            <img src="@Block.Media.Url" alt="@(Block.Media.AltText ?? "Lesson image")" loading="lazy" />
+            @if (!string.IsNullOrWhiteSpace(Block.Media.AltText))
+            {
+                <figcaption>@Block.Media.AltText</figcaption>
+            }
+        </figure>
+        break;
+
+    case LessonBlockType.Video when Block.Media is not null:
+        <figure class="lesson-figure">
+            <video controls preload="metadata" aria-label="@(Block.Media.AltText ?? "Lesson video")">
+                <source src="@Block.Media.Url" type="@Block.Media.ContentType" />
+                Your browser does not support embedded video.
+            </video>
+            @if (!string.IsNullOrWhiteSpace(Block.Media.AltText))
+            {
+                <figcaption>@Block.Media.AltText</figcaption>
+            }
+        </figure>
+        break;
+
+    case LessonBlockType.Audio when Block.Media is not null:
+        <div class="lesson-audio">
+            <audio controls preload="metadata" aria-label="@(Block.Media.AltText ?? "Lesson audio")">
+                <source src="@Block.Media.Url" type="@Block.Media.ContentType" />
+                Your browser does not support embedded audio.
+            </audio>
+            @if (!string.IsNullOrWhiteSpace(Block.Media.AltText))
+            {
+                <p class="audio-caption">@Block.Media.AltText</p>
+            }
+        </div>
+        break;
+
+    case LessonBlockType.Interactive:
+        <div class="lesson-interactive" role="group" aria-label="Interactive activity">
+            @if (Block.Media is not null)
+            {
+                <iframe src="@Block.Media.Url" title="@(Block.Media.AltText ?? "Interactive activity")"
+                        loading="lazy" class="interactive-frame"></iframe>
+            }
+            else if (!string.IsNullOrWhiteSpace(Block.Markdown))
+            {
+                <div class="prose">@Markdown.ToMarkup(Block.Markdown)</div>
+            }
+            else
+            {
+                <p class="text-sm text-slate-500">Interactive content is unavailable.</p>
+            }
+        </div>
+        break;
+
+    default:
+        @if (!string.IsNullOrWhiteSpace(Block.Markdown))
+        {
+            <div class="prose lesson-block">@Markdown.ToMarkup(Block.Markdown)</div>
+        }
+        break;
+}
+
+<style>
+    .lesson-block { margin: 0; }
+    .block-eyebrow { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--brand-700); margin-bottom: .35rem; }
+    .worked-example { border-left: 4px solid var(--brand-400); padding-left: 1rem; }
+    .lesson-callout { display: flex; gap: .75rem; background: var(--brand-50); border: 1px solid var(--brand-200); border-radius: .75rem; padding: 1rem; }
+    .callout-icon { font-size: 1.25rem; line-height: 1.5; }
+    .lesson-figure { margin: 0; }
+    .lesson-figure img, .lesson-figure video, .interactive-frame { width: 100%; border-radius: .75rem; }
+    .lesson-figure figcaption, .audio-caption { margin-top: .4rem; font-size: .8rem; color: #64748b; }
+    .interactive-frame { aspect-ratio: 16 / 9; border: 1px solid #e2e8f0; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public LessonBlockDto Block { get; set; } = default!;
+}

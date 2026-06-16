@@ -1,0 +1,61 @@
+@implements IDisposable
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+@* Gates its child content behind authentication and an optional allow-list of
+   roles. Redirects unauthenticated users to /login (preserving the return URL)
+   and renders an accessible "access denied" panel for wrong-role users. *@
+@if (!_initialized)
+{
+    <div class="p-8 text-center text-slate-500" role="status" aria-live="polite">Loading…</div>
+}
+else if (!Auth.IsAuthenticated)
+{
+    <div class="p-8 text-center text-slate-500" role="status">Redirecting to sign in…</div>
+}
+else if (!IsAllowed())
+{
+    <section class="mx-auto max-w-md p-8 text-center" role="alert">
+        <h1 class="text-2xl font-bold text-slate-900">Access denied</h1>
+        <p class="mt-2 text-slate-600">Your account (@Auth.Role) doesn't have access to this page.</p>
+        <a class="btn-primary mt-6" href="/">Go to your home</a>
+    </section>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    /// <summary>If empty/null, any authenticated user is allowed.</summary>
+    [Parameter] public UserRole[]? Roles { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _initialized;
+
+    private bool IsAllowed()
+    {
+        if (Roles is null || Roles.Length == 0) return true;
+        return Auth.Role is { } role && Roles.Contains(role);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.OnChange += StateHasChanged;
+
+        if (!Auth.IsAuthenticated)
+        {
+            await Auth.TryRestoreSessionAsync();
+        }
+
+        _initialized = true;
+
+        if (!Auth.IsAuthenticated)
+        {
+            var returnUrl = Uri.EscapeDataString(new Uri(Nav.Uri).PathAndQuery);
+            Nav.NavigateTo($"/login?returnUrl={returnUrl}", forceLoad: false);
+        }
+    }
+
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
+}

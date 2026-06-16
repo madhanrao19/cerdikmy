@@ -1,0 +1,237 @@
+@implements IAsyncDisposable
+@inject TutorClient Tutor
+@inject MarkdownService Markdown
+
+@* Streaming AI tutor chat. Sends messages via the SSE TutorClient, appending
+   "delta" chunks live and finalising with citations, mastery and risk. Includes
+   a needs-review banner and an accessible, labelled composer. *@
+<section class="tutor-panel" aria-label="AI tutor conversation">
+    @if (_needsReview)
+    {
+        <div class="review-banner" role="alert">
+            <span aria-hidden="true">🛡️</span>
+            <p>This conversation has been flagged for a teacher to review. A grown-up will take a look soon.</p>
+        </div>
+    }
+
+    <div class="tutor-log" role="log" aria-live="polite" aria-label="Messages" @ref="_logRef">
+        @if (Messages.Count == 0 && !_streaming)
+        {
+            <div class="tutor-empty">
+                <p class="empty-emoji" aria-hidden="true">💬</p>
+                <p>Ask me anything about your lesson. I'll explain step by step.</p>
+            </div>
+        }
+
+        @foreach (var m in Messages)
+        {
+            <div class="msg msg-@(m.IsUser ? "user" : "assistant")">
+                <div class="msg-role">@(m.IsUser ? "You" : "Tutor")</div>
+                <div class="msg-bubble">
+                    @if (m.IsUser)
+                    {
+                        <p>@m.Text</p>
+                    }
+                    else
+                    {
+                        <div class="prose">@Markdown.ToMarkup(m.Text)</div>
+                        @if (m.Citations.Count > 0)
+                        {
+                            <div class="msg-citations" aria-label="Sources">
+                                @foreach (var c in m.Citations)
+                                {
+                                    <CitationPill Citation="c" />
+                                }
+                            </div>
+                        }
+                        @if (m.MasterySignal is { } band)
+                        {
+                            <div class="msg-mastery"><MasteryBadge Band="band" /></div>
+                        }
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_streaming)
+        {
+            <div class="msg msg-assistant">
+                <div class="msg-role">Tutor</div>
+                <div class="msg-bubble">
+                    <div class="prose">@Markdown.ToMarkup(_streamingText.ToString())</div>
+                    <span class="typing" aria-hidden="true"><span></span><span></span><span></span></span>
+                    <span class="sr-only" role="status">Tutor is replying…</span>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (_error is not null)
+    {
+        <p class="tutor-error" role="alert">@_error</p>
+    }
+
+    <form class="tutor-composer" @onsubmit="SendAsync" @onsubmit:preventDefault>
+        <label class="sr-only" for="tutor-input">Type your question</label>
+        <textarea id="tutor-input" class="tutor-input" rows="2"
+                  placeholder="Type your question…" value="@_input"
+                  @oninput="e => _input = e.Value?.ToString() ?? string.Empty"
+                  @onkeydown="OnKeyDown" disabled="@(_streaming || SessionId is null)"></textarea>
+        <button type="submit" class="btn-primary tutor-send"
+                disabled="@(_streaming || SessionId is null || string.IsNullOrWhiteSpace(_input))">
+            @(_streaming ? "…" : "Send")
+        </button>
+    </form>
+    <p class="composer-hint">Press Enter to send, Shift+Enter for a new line.</p>
+</section>
+
+<style>
+    .tutor-panel { display: flex; flex-direction: column; height: 100%; min-height: 28rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; overflow: hidden; }
+    .review-banner { display: flex; align-items: center; gap: .6rem; background: #fffbeb; border-bottom: 1px solid #fde68a; color: #92400e; padding: .6rem 1rem; font-size: .85rem; }
+    .review-banner p { margin: 0; }
+    .tutor-log { flex: 1 1 auto; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: 1rem; }
+    .tutor-empty { margin: auto; text-align: center; color: #94a3b8; }
+    .empty-emoji { font-size: 2rem; }
+    .msg { display: flex; flex-direction: column; gap: .25rem; max-width: 90%; }
+    .msg-user { align-self: flex-end; align-items: flex-end; }
+    .msg-assistant { align-self: flex-start; }
+    .msg-role { font-size: .7rem; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: .03em; }
+    .msg-bubble { padding: .75rem .9rem; border-radius: .9rem; font-size: .9rem; }
+    .msg-user .msg-bubble { background: var(--brand-600); color: #fff; border-bottom-right-radius: .25rem; }
+    .msg-user .msg-bubble p { margin: 0; }
+    .msg-assistant .msg-bubble { background: #f1f5f9; color: #1e293b; border-bottom-left-radius: .25rem; }
+    .msg-citations { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .6rem; }
+    .msg-mastery { margin-top: .5rem; }
+    .typing { display: inline-flex; gap: 3px; margin-top: .35rem; }
+    .typing span { width: 6px; height: 6px; border-radius: 9999px; background: #94a3b8; animation: typing 1s infinite; }
+    .typing span:nth-child(2) { animation-delay: .15s; }
+    .typing span:nth-child(3) { animation-delay: .3s; }
+    @@keyframes typing { 0%, 60%, 100% { opacity: .3; } 30% { opacity: 1; } }
+    .tutor-error { padding: .5rem 1rem; color: #b91c1c; font-size: .85rem; margin: 0; }
+    .tutor-composer { display: flex; gap: .5rem; padding: .75rem; border-top: 1px solid #e2e8f0; }
+    .tutor-input { flex: 1 1 auto; resize: none; border: 1px solid #cbd5e1; border-radius: .5rem; padding: .5rem .75rem; font-size: .9rem; font-family: inherit; }
+    .tutor-input:focus { outline: none; border-color: var(--brand-500); box-shadow: 0 0 0 1px var(--brand-500); }
+    .tutor-send { align-self: stretch; }
+    .composer-hint { padding: 0 .75rem .6rem; font-size: .72rem; color: #94a3b8; margin: 0; }
+</style>
+
+@code {
+    [Parameter] public Guid? SessionId { get; set; }
+
+    /// <summary>Optional pre-existing messages (e.g. when resuming a session).</summary>
+    [Parameter] public IReadOnlyList<TutorMessageDto>? InitialMessages { get; set; }
+
+    /// <summary>Raised when a reply finalises (host may persist or react).</summary>
+    [Parameter] public EventCallback<TutorReplyDto> OnReplyReceived { get; set; }
+
+    private sealed class ChatMessage
+    {
+        public bool IsUser { get; init; }
+        public string Text { get; set; } = "";
+        public IReadOnlyList<CitationDto> Citations { get; set; } = Array.Empty<CitationDto>();
+        public MasteryBand? MasterySignal { get; set; }
+    }
+
+    private readonly List<ChatMessage> Messages = new();
+    private readonly System.Text.StringBuilder _streamingText = new();
+    private string _input = "";
+    private bool _streaming;
+    private bool _needsReview;
+    private string? _error;
+    private ElementReference _logRef;
+    private CancellationTokenSource? _cts;
+
+    protected override void OnParametersSet()
+    {
+        if (InitialMessages is { Count: > 0 } && Messages.Count == 0)
+        {
+            foreach (var m in InitialMessages)
+            {
+                Messages.Add(new ChatMessage
+                {
+                    IsUser = m.Role == TutorMessageRole.User,
+                    Text = m.Content,
+                    Citations = m.Citations,
+                    MasterySignal = m.MasterySignal,
+                });
+                if (m.NeedsReview) _needsReview = true;
+            }
+        }
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendAsync();
+        }
+    }
+
+    private async Task SendAsync()
+    {
+        if (_streaming || SessionId is not { } sessionId) return;
+        var text = _input.Trim();
+        if (string.IsNullOrEmpty(text)) return;
+
+        _error = null;
+        _input = "";
+        Messages.Add(new ChatMessage { IsUser = true, Text = text });
+        _streamingText.Clear();
+        _streaming = true;
+        StateHasChanged();
+
+        _cts = new CancellationTokenSource();
+        try
+        {
+            TutorReplyDto? final = null;
+            await foreach (var evt in Tutor.StreamMessageAsync(sessionId, text, _cts.Token))
+            {
+                if (evt.Kind == TutorStreamEventKind.Delta && evt.Delta is { } delta)
+                {
+                    _streamingText.Append(delta);
+                    StateHasChanged();
+                }
+                else if (evt.Kind == TutorStreamEventKind.Final && evt.Final is { } reply)
+                {
+                    final = reply;
+                }
+            }
+
+            // Materialise the assistant message from the final event (or accumulated text).
+            var answer = final?.AnswerMarkdown is { Length: > 0 } md ? md : _streamingText.ToString();
+            Messages.Add(new ChatMessage
+            {
+                IsUser = false,
+                Text = answer,
+                Citations = final?.Citations ?? Array.Empty<CitationDto>(),
+                MasterySignal = final?.MasterySignal,
+            });
+
+            if (final?.NeedsReview == true) _needsReview = true;
+            if (final is not null) await OnReplyReceived.InvokeAsync(final);
+        }
+        catch (OperationCanceledException)
+        {
+            // Disposed mid-stream; ignore.
+        }
+        catch (Exception ex)
+        {
+            _error = ex is ApiException api ? api.Message : "The tutor is unavailable right now. Please try again.";
+        }
+        finally
+        {
+            _streaming = false;
+            _streamingText.Clear();
+            StateHasChanged();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_cts is not null)
+        {
+            await _cts.CancelAsync();
+            _cts.Dispose();
+        }
+    }
+}

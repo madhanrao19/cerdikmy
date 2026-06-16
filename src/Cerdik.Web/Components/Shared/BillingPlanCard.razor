@@ -1,0 +1,73 @@
+@* A subscription plan card. Prices are stored in MYR cents and formatted as
+   "RMx.xx". The whole card is selectable; the action button raises OnSelect. *@
+<article class="plan-card @(Highlighted ? "highlighted" : "") @(IsCurrent ? "current" : "")"
+         aria-current="@(IsCurrent ? "true" : null)">
+    @if (Highlighted)
+    {
+        <span class="plan-flag">Most popular</span>
+    }
+    <h3 class="plan-name">@Plan.Name</h3>
+    <p class="plan-price">
+        <span class="price-amount">@FormatPrice(Plan.AmountCents, Plan.Currency)</span>
+        <span class="price-interval">/ @Plan.Interval</span>
+    </p>
+    @if (Plan.SeatLimit > 0)
+    {
+        <p class="plan-seats">Up to @Plan.SeatLimit student@(Plan.SeatLimit == 1 ? "" : "s")</p>
+    }
+
+    <ul class="plan-features">
+        @foreach (var f in Plan.Features)
+        {
+            <li><span class="feature-tick" aria-hidden="true">✓</span> @f</li>
+        }
+    </ul>
+
+    @if (IsCurrent)
+    {
+        <button type="button" class="btn-secondary plan-cta" disabled>Current plan</button>
+    }
+    else
+    {
+        <button type="button" class="btn-primary plan-cta" disabled="@Disabled"
+                @onclick="() => OnSelect.InvokeAsync(Plan)">
+            @(Disabled ? "Processing…" : SelectLabel)
+        </button>
+    }
+</article>
+
+<style>
+    .plan-card { position: relative; display: flex; flex-direction: column; gap: .6rem; background: #fff; border: 1px solid #e2e8f0; border-radius: .9rem; padding: 1.25rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    .plan-card.highlighted { border-color: var(--brand-500); box-shadow: 0 8px 20px -8px rgba(33,82,217,.4); }
+    .plan-card.current { border-color: #34d399; }
+    .plan-flag { position: absolute; top: -.7rem; right: 1rem; background: var(--brand-600); color: #fff; font-size: .7rem; font-weight: 600; padding: .15rem .6rem; border-radius: 9999px; }
+    .plan-name { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+    .plan-price { display: flex; align-items: baseline; gap: .35rem; }
+    .price-amount { font-size: 1.75rem; font-weight: 800; color: #0f172a; }
+    .price-interval { font-size: .85rem; color: #64748b; }
+    .plan-seats { font-size: .82rem; color: #475569; }
+    .plan-features { list-style: none; margin: .25rem 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; font-size: .85rem; color: #334155; }
+    .feature-tick { color: #059669; font-weight: 700; margin-right: .35rem; }
+    .plan-cta { margin-top: auto; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public BillingPlanDto Plan { get; set; } = default!;
+    [Parameter] public bool Highlighted { get; set; }
+    [Parameter] public bool IsCurrent { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string SelectLabel { get; set; } = "Choose plan";
+    [Parameter] public EventCallback<BillingPlanDto> OnSelect { get; set; }
+
+    /// <summary>Formats MYR (or other) cents as a currency string, e.g. 4990 -> RM49.90.</summary>
+    public static string FormatPrice(int cents, string currency)
+    {
+        var symbol = currency?.ToUpperInvariant() switch
+        {
+            "MYR" => "RM",
+            "USD" => "$",
+            _ => (currency ?? "") + " ",
+        };
+        return $"{symbol}{cents / 100m:0.00}";
+    }
+}

@@ -1,0 +1,34 @@
+{
+  "_comment": "Example API app settings for Azure Container Apps. In Azure, configuration is supplied via environment variables. ASP.NET Core maps a double underscore '__' in an env var name onto the ':' hierarchy separator, so the env var 'ConnectionStrings__Default' binds to configuration key 'ConnectionStrings:Default', 'Jwt__AccessSecret' -> 'Jwt:AccessSecret', etc. The JSON below mirrors the appsettings shape; when injecting into Container Apps use the flattened Section__Key form (see main.bicep). Secret values shown are placeholders — store real secrets as container app secrets / Key Vault references, never in source.",
+  "ConnectionStrings": {
+    "Default": "Server=tcp:cerdik-sql.database.windows.net,1433;Initial Catalog=cerdikmy;User ID=cerdikadmin;Password=REPLACE_ME;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  },
+  "Jwt": {
+    "AccessSecret": "REPLACE_ME-access-secret-min-32-chars-long",
+    "RefreshSecret": "REPLACE_ME-refresh-secret-min-32-chars-long",
+    "Issuer": "cerdikmy",
+    "Audience": "cerdikmy-clients",
+    "AccessTtlMinutes": 15,
+    "RefreshTtlDays": 30
+  },
+  "Ai": {
+    "Provider": "openai",
+    "OpenAiApiKey": "sk-REPLACE_ME",
+    "OpenAiChatModel": "gpt-4o-mini",
+    "OpenAiEmbedModel": "text-embedding-3-small"
+  },
+  "Storage": {
+    "Provider": "azure",
+    "AzureConnectionString": "DefaultEndpointsProtocol=https;AccountName=REPLACE_ME;AccountKey=REPLACE_ME;EndpointSuffix=core.windows.net",
+    "Container": "cerdik-media"
+  },
+  "Payments": {
+    "Provider": "billplz",
+    "BillplzApiKey": "REPLACE_ME",
+    "BillplzCollectionId": "REPLACE_ME"
+  },
+  "Otel": {
+    "ExporterOtlpEndpoint": "https://otel-collector.example.com:4317",
+    "ServiceName": "cerdikmy-api"
+  }
+}

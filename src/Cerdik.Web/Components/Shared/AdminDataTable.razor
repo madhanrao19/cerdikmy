@@ -1,0 +1,135 @@
+@typeparam TItem
+@using System.Linq.Expressions
+
+@* Reusable admin data table: client-side search, paging, an empty state and a
+   responsive card layout on small screens. The host supplies column headers and
+   per-row cells via RenderFragments. *@
+<div class="data-table-wrap">
+    <div class="table-toolbar">
+        @if (Searchable)
+        {
+            <div class="table-search">
+                <label class="sr-only" for="@_searchId">Search</label>
+                <input id="@_searchId" class="input" type="search" placeholder="@SearchPlaceholder"
+                       value="@_search" @oninput="OnSearch" aria-label="@SearchPlaceholder" />
+            </div>
+        }
+        @if (Toolbar is not null)
+        {
+            <div class="table-toolbar-actions">@Toolbar</div>
+        }
+    </div>
+
+    @if (FilteredCount == 0)
+    {
+        <div class="table-empty" role="status">
+            @if (EmptyContent is not null)
+            {
+                @EmptyContent
+            }
+            else
+            {
+                <p>@EmptyMessage</p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="table-scroll">
+            <table class="data-table">
+                <thead>
+                    <tr>@HeaderTemplate</tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in PageItems)
+                    {
+                        <tr>@RowTemplate(item)</tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (TotalPages > 1)
+        {
+            <nav class="table-pager" aria-label="Pagination">
+                <button class="btn-secondary" type="button" @onclick="Prev" disabled="@(_page == 0)"
+                        aria-label="Previous page">Previous</button>
+                <span class="pager-status" aria-live="polite">
+                    Page @(_page + 1) of @TotalPages · @FilteredCount item@(FilteredCount == 1 ? "" : "s")
+                </span>
+                <button class="btn-secondary" type="button" @onclick="Next" disabled="@(_page >= TotalPages - 1)"
+                        aria-label="Next page">Next</button>
+            </nav>
+        }
+    }
+</div>
+
+<style>
+    .data-table-wrap { display: flex; flex-direction: column; gap: .75rem; }
+    .table-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; }
+    .table-search { flex: 1 1 16rem; max-width: 24rem; }
+    .table-toolbar-actions { display: flex; gap: .5rem; }
+    .table-scroll { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: .75rem; background: #fff; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    .data-table thead th { text-align: left; font-weight: 600; color: #475569; background: #f8fafc; padding: .65rem .85rem; border-bottom: 1px solid #e2e8f0; white-space: nowrap; }
+    .data-table tbody td { padding: .65rem .85rem; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: middle; }
+    .data-table tbody tr:last-child td { border-bottom: 0; }
+    .data-table tbody tr:hover { background: #f8fafc; }
+    .table-empty { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; border: 1px dashed #cbd5e1; border-radius: .75rem; background: #fff; }
+    .table-pager { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+    .pager-status { font-size: .8rem; color: #64748b; }
+    @@media (max-width: 639px) {
+        .data-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+        .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+        .data-table tbody tr { border: 1px solid #e2e8f0; border-radius: .5rem; margin-bottom: .5rem; padding: .25rem; }
+        .data-table tbody td { border-bottom: 1px solid #f1f5f9; }
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TItem> Items { get; set; } = Array.Empty<TItem>();
+
+    /// <summary>Header cells (a sequence of &lt;th&gt; elements).</summary>
+    [Parameter, EditorRequired] public RenderFragment HeaderTemplate { get; set; } = default!;
+
+    /// <summary>Row cells for one item (a sequence of &lt;td&gt; elements).</summary>
+    [Parameter, EditorRequired] public RenderFragment<TItem> RowTemplate { get; set; } = default!;
+
+    /// <summary>Projects an item to its searchable text. Required if Searchable.</summary>
+    [Parameter] public Func<TItem, string>? SearchText { get; set; }
+
+    [Parameter] public bool Searchable { get; set; } = true;
+    [Parameter] public string SearchPlaceholder { get; set; } = "Search…";
+    [Parameter] public int PageSize { get; set; } = 10;
+    [Parameter] public string EmptyMessage { get; set; } = "No records to display.";
+    [Parameter] public RenderFragment? EmptyContent { get; set; }
+    [Parameter] public RenderFragment? Toolbar { get; set; }
+
+    private string _search = "";
+    private int _page;
+    private readonly string _searchId = $"tbl-search-{Guid.NewGuid():N}";
+
+    private IReadOnlyList<TItem> Filtered
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_search) || SearchText is null) return Items;
+            var term = _search.Trim();
+            return Items.Where(i =>
+                SearchText(i).Contains(term, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+    }
+
+    private int FilteredCount => Filtered.Count;
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(FilteredCount / (double)PageSize));
+    private IEnumerable<TItem> PageItems => Filtered.Skip(_page * PageSize).Take(PageSize);
+
+    private void OnSearch(ChangeEventArgs e)
+    {
+        _search = e.Value?.ToString() ?? "";
+        _page = 0;
+    }
+
+    private void Prev() { if (_page > 0) _page--; }
+    private void Next() { if (_page < TotalPages - 1) _page++; }
+}

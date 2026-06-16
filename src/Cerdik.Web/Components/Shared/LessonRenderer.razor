@@ -1,0 +1,43 @@
+@* Renders a lesson's ordered blocks. Activities are rendered separately by the
+   page (via QuizCard) so the renderer stays focused on instructional content. *@
+<article class="lesson-renderer">
+    <header class="lesson-head">
+        <h1 class="lesson-title">@Lesson.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Lesson.Summary))
+        {
+            <p class="lesson-summary">@Lesson.Summary</p>
+        }
+        <p class="lesson-meta">
+            <span aria-hidden="true">⏱️</span>
+            <span>@Lesson.EstimatedMinutes min</span>
+            <span aria-hidden="true">·</span>
+            <span>@Lesson.Blocks.Count sections</span>
+        </p>
+    </header>
+
+    <div class="lesson-body">
+        @foreach (var block in Lesson.Blocks.OrderBy(b => b.SortOrder))
+        {
+            <div class="lesson-section">
+                <MediaBlockRenderer Block="block" />
+            </div>
+        }
+        @if (Lesson.Blocks.Count == 0)
+        {
+            <p class="text-slate-500">This lesson has no content yet.</p>
+        }
+    </div>
+</article>
+
+<style>
+    .lesson-renderer { max-width: 46rem; }
+    .lesson-head { margin-bottom: 1.5rem; }
+    .lesson-title { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
+    .lesson-summary { margin-top: .5rem; color: #475569; font-size: 1.05rem; }
+    .lesson-meta { display: flex; align-items: center; gap: .5rem; margin-top: .75rem; font-size: .85rem; color: #64748b; }
+    .lesson-body { display: flex; flex-direction: column; gap: 1.5rem; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public LessonDto Lesson { get; set; } = default!;
+}

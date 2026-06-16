@@ -149,19 +149,39 @@ is required.
 | --- | --- | --- |
 | Parent | `parent.demo@cerdik.my` | `Demo!2345` |
 | Admin | `admin@cerdik.my` | `Admin!2345` |
-| Student | `student.demo@cerdik.my` | `Student!2345` |
+| Student | `aisyah@cerdik.my` | `Student!2345` |
 
-The student login is a guardian-managed account linked to the demo parent's
-household (`User.StudentId` points at the seeded `Student`).
+The student login (`aisyah@cerdik.my`) is a guardian-managed account linked to
+the demo parent's household (`User.StudentId` points at the seeded `Student`).
+
+### Seeded demo curriculum
+
+The seed loads **original, KPM-aligned placeholder lessons** (never copyrighted
+textbook content) across levels, school types, languages and DLP modes:
+
+| Level | Subject / variant |
+| --- | --- |
+| Preschool | Preschool sample module |
+| Primary (Year 1) | Mathematics — SK, SJKC and SJKT variants |
+| Primary (Year 1) | English |
+| Lower Secondary (Form 1) | Science |
+| Upper Secondary (Form 4) | Mathematics |
+| DLP | Science and Mathematics DLP subject variants (gated behind `dlp.*` flags) |
+
+Each lesson is chunked into `EmbeddingChunk` rows (embedded for RAG), so the AI
+tutor can answer grounded in this corpus out of the box.
 
 ---
 
 ## Local development (without Docker)
 
 Provision a SQL Server 2025 instance and point `DATABASE_URL` at it (see
-`.env.example`), then run each project:
+`.env.example`), then restore and run each project:
 
 ```bash
+# Restore the solution (pulls central NuGet versions from Directory.Packages.props)
+dotnet restore CerdikMY.sln
+
 # API (auto-migrates + seeds on startup)
 dotnet run --project src/Cerdik.Api          # -> http://localhost:5081
 
@@ -172,13 +192,36 @@ dotnet run --project src/Cerdik.Web          # -> http://localhost:5080
 dotnet run --project src/Cerdik.Worker
 ```
 
+The API also exposes explicit one-off flags so you can run migration and seeding
+deterministically (e.g. in CI or a Hostinger/Azure release step) instead of
+relying on startup auto-apply:
+
+```bash
+# Apply EF Core migrations and exit
+dotnet run --project src/Cerdik.Api -- --migrate
+
+# Seed the demo curriculum + accounts and exit
+dotnet run --project src/Cerdik.Api -- --seed
+```
+
 To use the mock AI provider (no API keys, deterministic replies for local dev),
 set `AI_PROVIDER=mock` in your `.env` / environment.
 
-Run the test suite with:
+---
+
+## Testing
+
+The `tests/` projects use xUnit. Integration tests spin up SQL Server via
+`Testcontainers.MsSql`; the E2E project drives the Blazor app with Playwright.
 
 ```bash
-dotnet test
+# Run everything
+dotnet test CerdikMY.sln
+
+# Run a single suite
+dotnet test tests/Cerdik.UnitTests
+dotnet test tests/Cerdik.IntegrationTests
+dotnet test tests/Cerdik.E2E
 ```
 
 ---
