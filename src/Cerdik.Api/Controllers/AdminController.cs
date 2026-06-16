@@ -27,8 +27,9 @@ public sealed class AdminController : ControllerBase
         _current = current;
     }
 
-    // ---- Users ----
+    // ---- Users (platform admins only; ContentAdmin/SafetyReviewer must not read account PII) ----
     [HttpGet("users")]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IReadOnlyList<AdminUserDto>>> Users([FromQuery] string? search, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
     {
         var query = _db.Users.AsNoTracking().Where(u => u.DeletedAt == null);

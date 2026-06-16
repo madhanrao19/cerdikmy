@@ -5,6 +5,7 @@ using Cerdik.Domain;
 using Cerdik.Domain.Entities;
 using Cerdik.Infrastructure.Options;
 using Cerdik.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -20,14 +21,16 @@ public sealed class AuthController : ControllerBase
     private readonly ITokenService _tokens;
     private readonly JwtOptions _jwt;
     private readonly IClock _clock;
+    private readonly ICurrentUser _current;
 
-    public AuthController(AppDbContext db, IPasswordHasher hasher, ITokenService tokens, IOptions<JwtOptions> jwt, IClock clock)
+    public AuthController(AppDbContext db, IPasswordHasher hasher, ITokenService tokens, IOptions<JwtOptions> jwt, IClock clock, ICurrentUser current)
     {
         _db = db;
         _hasher = hasher;
         _tokens = tokens;
         _jwt = jwt.Value;
         _clock = clock;
+        _current = current;
     }
 
     [HttpPost("register-parent")]
@@ -60,10 +63,18 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("register-student")]
+    [Authorize(Roles = "Parent,Admin")]
     public async Task<ActionResult<AuthResponse>> RegisterStudent([FromBody] RegisterStudentRequest req, CancellationToken ct)
     {
         var household = await _db.Households.Include(h => h.Organization).FirstOrDefaultAsync(h => h.Id == req.HouseholdId, ct)
             ?? throw ApiException.NotFound("Household");
+
+        // A parent may only add students to their OWN household; admins may target any household.
+        if (!_current.IsInRole(UserRole.Admin) &&
+            !await _db.Users.AnyAsync(u => u.Id == _current.UserId && u.HouseholdId == household.Id, ct))
+        {
+            throw ApiException.Forbidden("You can only add students to your own household.");
+        }
 
         var student = new Student
         {
@@ -160,7 +171,7 @@ public sealed class AuthController : ControllerBase
                 await _db.SaveChangesAsync(ct);
             }
         }
-        AuthCookies.Clear(Response);
+        AuthCookies.Clear(Response, _jwt.CookieDomain);
         return NoContent();
     }
 

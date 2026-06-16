@@ -34,9 +34,13 @@ public static class AuthCookies
         });
     }
 
-    public static void Clear(HttpResponse response)
+    public static void Clear(HttpResponse response, string cookieDomain)
     {
-        response.Cookies.Delete(Access);
-        response.Cookies.Delete(Refresh);
+        // Deletion must use the same Domain/Path the cookies were written with, otherwise a
+        // domain-scoped refresh cookie survives logout and can restore the session.
+        var domain = string.IsNullOrWhiteSpace(cookieDomain) || cookieDomain == "localhost" ? null : cookieDomain;
+        var options = new CookieOptions { Domain = domain, Path = "/" };
+        response.Cookies.Delete(Access, options);
+        response.Cookies.Delete(Refresh, options);
     }
 }

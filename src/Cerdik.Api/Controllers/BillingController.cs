@@ -1,6 +1,7 @@
 using Cerdik.Application.Abstractions;
 using Cerdik.Application.Dtos;
 using Cerdik.Domain;
+using Cerdik.Domain.Entities;
 using Cerdik.Infrastructure.Options;
 using Cerdik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -57,6 +58,26 @@ public sealed class BillingController : ControllerBase
 
         var session = await provider.CreateCheckoutSessionAsync(
             new CheckoutRequest(household.Id, plan.Code, plan.AmountCents, plan.Currency, email, req.ReturnUrl), ct);
+
+        // Persist the checkout -> subscription mapping NOW so the webhook can resolve the exact
+        // household by ProviderSubscriptionId, never a global "newest row" guess. One subscription
+        // per household: reuse the existing row, otherwise create a pending (Trialing) one.
+        var subscription = await _db.Subscriptions
+            .OrderByDescending(s => s.CreatedAt)
+            .FirstOrDefaultAsync(s => s.HouseholdId == household.Id, ct);
+        if (subscription is null)
+        {
+            subscription = new Subscription { HouseholdId = household.Id, Status = SubscriptionStatus.Trialing };
+            _db.Subscriptions.Add(subscription);
+        }
+        subscription.PlanCode = plan.Code;
+        subscription.PlanName = plan.Name;
+        subscription.Currency = plan.Currency;
+        subscription.AmountCents = plan.AmountCents;
+        subscription.SeatLimit = plan.SeatLimit;
+        subscription.Provider = providerEnum;
+        subscription.ProviderSubscriptionId = session.ProviderSessionId;
+        await _db.SaveChangesAsync(ct);
 
         return Ok(new CheckoutSessionDto(providerEnum.ToString(), session.CheckoutUrl, session.ProviderSessionId));
     }

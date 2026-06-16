@@ -50,12 +50,20 @@ public sealed class WebhooksController : ControllerBase
             return Ok(new { status = "duplicate" });
         }
 
-        // Attach to a subscription if we can resolve one (by provider subscription id).
-        var subscription = evt.ProviderSubscriptionId is null ? null
-            : await _db.Subscriptions.FirstOrDefaultAsync(s => s.ProviderSubscriptionId == evt.ProviderSubscriptionId, ct);
-        subscription ??= await _db.Subscriptions.OrderByDescending(s => s.CreatedAt).FirstOrDefaultAsync(ct);
+        // Resolve the EXACT subscription this event belongs to via the provider id recorded at
+        // checkout (ProviderSubscriptionId). We never fall back to a global "newest row", which
+        // could activate or fault another household's subscription.
+        var providerRef = evt.ProviderSubscriptionId ?? evt.ProviderPaymentId;
+        var subscription = string.IsNullOrEmpty(providerRef) ? null
+            : await _db.Subscriptions.FirstOrDefaultAsync(s =>
+                s.ProviderSubscriptionId == evt.ProviderSubscriptionId || s.ProviderSubscriptionId == evt.ProviderPaymentId, ct);
 
-        if (subscription is not null)
+        if (subscription is null)
+        {
+            _log.LogWarning("Unmatched {Provider} webhook {PaymentId}; no subscription linked at checkout.", provider, evt.ProviderPaymentId);
+            return Ok(new { status = "unmatched" });
+        }
+
         {
             _db.Payments.Add(new Payment
             {

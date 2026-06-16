@@ -79,18 +79,18 @@ public static class SystemPrompts
         """;
 
     public static string PracticeGenerator(string subjectName, Level level, Language language) =>
-        $"""
-        Generate original practice questions for the subject "{subjectName}" at the {level} level.
-        {LanguageInstruction(language)}
+        $$"""
+        Generate original practice questions for the subject "{{subjectName}}" at the {{level}} level.
+        {{LanguageInstruction(language)}}
         Do NOT copy from any textbook. Write fresh, KPM-aligned questions.
-        Return JSON: {{ "title": "string", "questions": [ {{ "prompt": "...", "type": "MultipleChoice|TrueFalse|ShortAnswer|Numeric|Ordering", "options": ["..."], "correct_answer": "...", "explanation": "..." }} ] }}.
+        Return JSON: { "title": "string", "questions": [ { "prompt": "...", "type": "MultipleChoice|TrueFalse|ShortAnswer|Numeric|Ordering", "options": ["..."], "correct_answer": "...", "explanation": "..." } ] }.
         """;
 
     public static string ProgressSummarizer(Language language) =>
-        $"""
+        $$"""
         You write short, warm progress summaries for a parent about their child's learning.
-        {LanguageInstruction(language)}
-        Be specific, positive and practical. Return JSON: {{ "narrative_markdown": "...", "recommendations": ["...","..."] }}.
+        {{LanguageInstruction(language)}}
+        Be specific, positive and practical. Return JSON: { "narrative_markdown": "...", "recommendations": ["...","..."] }.
         """;
 
     private static string LanguageInstruction(Language language) => language switch
