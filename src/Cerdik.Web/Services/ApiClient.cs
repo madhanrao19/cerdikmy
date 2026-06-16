@@ -74,6 +74,14 @@ public sealed class ApiClient
         => GetAsync<LessonDto>($"/lessons/{lessonId}", ct);
 
     // ------------------------------------------------------------ Attempts
+    /// <summary>
+    /// Fetches an activity with its (client-safe) questions. Not in the core
+    /// endpoint list but required to render a quiz; the server omits correct
+    /// answers from <see cref="QuestionDto"/>.
+    /// </summary>
+    public Task<ActivityDto> GetActivityAsync(Guid activityId, CancellationToken ct = default)
+        => GetAsync<ActivityDto>($"/activities/{activityId}", ct);
+
     public Task<AttemptDto> StartActivityAsync(Guid activityId, Guid studentId, CancellationToken ct = default)
         => PostAsync<StartActivityRequest, AttemptDto>($"/activities/{activityId}/start", new StartActivityRequest(studentId), ct);
 

@@ -1,0 +1,80 @@
+@page "/parent/flags"
+@inject ApiClient Api
+
+<PageTitle>Safety flags — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Parent })">
+        <h1 class="page-title">AI safety flags</h1>
+        <p class="page-sub mb-6">
+            Conversations our safety system flagged for review. These are read-only;
+            our safety team reviews and acts on each one.
+        </p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading flags…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else if (_items.Count == 0)
+        {
+            <div class="card empty" role="status">
+                <p class="empty-emoji" aria-hidden="true">✅</p>
+                <p>No safety flags. Your children's tutoring sessions look healthy.</p>
+            </div>
+        }
+        else
+        {
+            <div class="flags-list">
+                @foreach (var item in _items)
+                {
+                    <ModerationReviewCard Item="item" ReadOnly="true" />
+                }
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; max-width: 42rem; }
+    .flags-list { display: flex; flex-direction: column; gap: 1rem; max-width: 48rem; }
+    .empty { text-align: center; color: #64748b; }
+    .empty-emoji { font-size: 2rem; }
+</style>
+
+@code {
+    private IReadOnlyList<ModerationQueueItemDto> _items = Array.Empty<ModerationQueueItemDto>();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _items = await Api.GetModerationQueueAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load safety flags. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

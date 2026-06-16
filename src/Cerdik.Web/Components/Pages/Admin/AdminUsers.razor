@@ -1,0 +1,193 @@
+@page "/admin/users"
+@using System.ComponentModel.DataAnnotations
+@inject ApiClient Api
+
+<PageTitle>Users — cerdikMY Admin</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Admin })">
+        <h1 class="page-title">Users</h1>
+        <p class="page-sub mb-6">Manage platform accounts and roles.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading users…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else
+        {
+            <AdminDataTable TItem="AdminUserDto" Items="_users"
+                            SearchText="@(u => $"{u.Email} {u.FullName} {u.Role}")"
+                            SearchPlaceholder="Search by email, name or role">
+                <Toolbar>
+                    <button class="btn-primary" @onclick="OpenCreate">+ New user</button>
+                </Toolbar>
+                <HeaderTemplate>
+                    <th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Created</th><th>Last login</th>
+                </HeaderTemplate>
+                <RowTemplate Context="u">
+                    <td>@u.Email</td>
+                    <td>@(u.FullName ?? "—")</td>
+                    <td><span class="role-pill">@u.Role</span></td>
+                    <td>
+                        <span class="status-dot @(u.IsActive ? "on" : "off")" aria-hidden="true"></span>
+                        @(u.IsActive ? "Active" : "Inactive")
+                    </td>
+                    <td>@u.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                    <td>@(u.LastLoginAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
+                </RowTemplate>
+                <EmptyContent>
+                    <p>No users found.</p>
+                </EmptyContent>
+            </AdminDataTable>
+        }
+
+        @if (_showCreate)
+        {
+            <div class="modal-backdrop" @onclick="CloseCreate">
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="create-user-h"
+                     @onclick:stopPropagation>
+                    <h2 id="create-user-h" class="modal-title">Create user</h2>
+                    <EditForm Model="_form" OnValidSubmit="CreateAsync" FormName="create-user">
+                        <DataAnnotationsValidator />
+                        @if (_createError is not null)
+                        {
+                            <p class="text-rose-700 mb-3" role="alert">@_createError</p>
+                        }
+                        <div class="field">
+                            <label class="label" for="cu-name">Full name</label>
+                            <InputText id="cu-name" class="input" @bind-Value="_form.FullName" />
+                            <ValidationMessage For="() => _form.FullName" role="alert" />
+                        </div>
+                        <div class="field">
+                            <label class="label" for="cu-email">Email</label>
+                            <InputText id="cu-email" class="input" @bind-Value="_form.Email" />
+                            <ValidationMessage For="() => _form.Email" role="alert" />
+                        </div>
+                        <div class="field">
+                            <label class="label" for="cu-password">Temporary password</label>
+                            <InputText id="cu-password" type="password" class="input" @bind-Value="_form.Password" />
+                            <ValidationMessage For="() => _form.Password" role="alert" />
+                        </div>
+                        <div class="field">
+                            <label class="label" for="cu-role">Role</label>
+                            <InputSelect id="cu-role" class="input" @bind-Value="_form.Role">
+                                @foreach (var r in Enum.GetValues<UserRole>())
+                                {
+                                    <option value="@r">@r</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn-secondary" @onclick="CloseCreate">Cancel</button>
+                            <button type="submit" class="btn-primary" disabled="@_creating">
+                                @(_creating ? "Creating…" : "Create user")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .role-pill { font-size: .72rem; font-weight: 600; background: var(--brand-50); color: var(--brand-700); padding: .1rem .5rem; border-radius: 9999px; }
+    .status-dot { display: inline-block; width: .55rem; height: .55rem; border-radius: 9999px; margin-right: .35rem; }
+    .status-dot.on { background: #10b981; } .status-dot.off { background: #cbd5e1; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+    .modal { background: #fff; border-radius: 1rem; padding: 1.5rem; width: 100%; max-width: 28rem; box-shadow: 0 20px 40px -16px rgba(0,0,0,.4); }
+    .modal-title { font-size: 1.2rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .field { margin-bottom: 1rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+</style>
+
+@code {
+    private IReadOnlyList<AdminUserDto> _users = Array.Empty<AdminUserDto>();
+    private bool _loading = true;
+    private string? _error;
+
+    private bool _showCreate;
+    private bool _creating;
+    private string? _createError;
+    private CreateUserForm _form = new();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _users = await Api.GetAdminUsersAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load users. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreate()
+    {
+        _form = new CreateUserForm();
+        _createError = null;
+        _showCreate = true;
+    }
+
+    private void CloseCreate() => _showCreate = false;
+
+    private async Task CreateAsync()
+    {
+        _creating = true;
+        _createError = null;
+        try
+        {
+            await Api.CreateAdminUserAsync(
+                new CreateAdminUserRequest(_form.Email, _form.Password, _form.FullName, _form.Role));
+            _showCreate = false;
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _createError = ex.StatusCode == System.Net.HttpStatusCode.Conflict
+                ? "A user with this email already exists."
+                : ex.Message;
+        }
+        catch (Exception)
+        {
+            _createError = "We couldn't create the user. Please try again.";
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    private sealed class CreateUserForm
+    {
+        [Required, StringLength(120, MinimumLength = 2)]
+        public string FullName { get; set; } = "";
+        [Required, EmailAddress]
+        public string Email { get; set; } = "";
+        [Required, StringLength(100, MinimumLength = 8, ErrorMessage = "Minimum 8 characters.")]
+        public string Password { get; set; } = "";
+        public UserRole Role { get; set; } = UserRole.ContentAdmin;
+    }
+}
