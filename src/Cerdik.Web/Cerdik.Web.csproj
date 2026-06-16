@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <AssemblyName>Cerdik.Web</AssemblyName>
+    <RootNamespace>Cerdik.Web</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cerdik.Application\Cerdik.Application.csproj" />
+  </ItemGroup>
+
+  <!-- Tailwind build artifacts and node_modules should not be packed into the project. -->
+  <ItemGroup>
+    <Content Remove="node_modules\**" />
+    <None Remove="node_modules\**" />
+    <Content Remove="package-lock.json" />
+  </ItemGroup>
+</Project>
