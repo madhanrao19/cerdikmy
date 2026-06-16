@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup>
+    <AssemblyName>Cerdik.Worker</AssemblyName>
+    <RootNamespace>Cerdik.Worker</RootNamespace>
+    <UserSecretsId>cerdikmy-worker</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cerdik.Application\Cerdik.Application.csproj" />
+    <ProjectReference Include="..\Cerdik.Infrastructure\Cerdik.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.SqlServer" />
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+</Project>

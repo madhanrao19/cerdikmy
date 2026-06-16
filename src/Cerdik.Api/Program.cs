@@ -82,18 +82,22 @@ builder.Services.AddCors(o => o.AddPolicy("web", p => p
     .AllowAnyMethod()
     .AllowCredentials()));
 
-// ---- Hangfire (SQL Server storage) ----
+// ---- Hangfire (SQL Server storage). Skipped under the Testing environment. ----
+var isTesting = builder.Environment.IsEnvironment("Testing");
 var hangfireConn = builder.Configuration["DATABASE_URL"] ?? builder.Configuration.GetConnectionString("Default");
-builder.Services.AddHangfire(cfg => cfg
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UseSqlServerStorage(hangfireConn, new SqlServerStorageOptions
-    {
-        PrepareSchemaIfNecessary = true,
-        QueuePollInterval = TimeSpan.FromSeconds(15),
-    }));
-builder.Services.AddHangfireServer();
+if (!isTesting)
+{
+    builder.Services.AddHangfire(cfg => cfg
+        .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+        .UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings()
+        .UseSqlServerStorage(hangfireConn, new SqlServerStorageOptions
+        {
+            PrepareSchemaIfNecessary = true,
+            QueuePollInterval = TimeSpan.FromSeconds(15),
+        }));
+    builder.Services.AddHangfireServer();
+}
 
 // ---- OpenTelemetry (tracing) ----
 var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
@@ -131,16 +135,19 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHangfireDashboard("/hangfire", new DashboardOptions
+if (!isTesting)
 {
-    Authorization = [new HangfireDashboardAuthFilter(app.Environment.IsDevelopment())],
-});
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = [new HangfireDashboardAuthFilter(app.Environment.IsDevelopment())],
+    });
+
+    // Recurring jobs.
+    RecurringJob.AddOrUpdate<BackgroundJobs>("recompute-mastery", j => j.RecomputeMasteryAsync(), Cron.Daily(20));
+}
 
 app.MapControllers();
 app.MapHealthChecks("/health");
-
-// Recurring jobs.
-RecurringJob.AddOrUpdate<BackgroundJobs>("recompute-mastery", j => j.RecomputeMasteryAsync(), Cron.Daily(20));
 
 // Auto initialize + seed on startup (idempotent). Disable with SEED_ON_STARTUP=false.
 if (builder.Configuration["SEED_ON_STARTUP"] != "false")
