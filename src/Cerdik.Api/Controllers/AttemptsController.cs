@@ -27,6 +27,22 @@ public sealed class AttemptsController : ControllerBase
         _clock = clock;
     }
 
+    /// <summary>Fetch an activity with client-safe questions (the correct answers are never sent to clients).</summary>
+    [HttpGet("/activities/{id:guid}")]
+    public async Task<ActionResult<ActivityDto>> GetActivity(Guid id, CancellationToken ct)
+    {
+        var activity = await _db.Activities.AsNoTracking().FirstOrDefaultAsync(a => a.Id == id, ct)
+            ?? throw ApiException.NotFound("Activity");
+
+        var graded = JsonSerializer.Deserialize<List<GradedQuestionJson>>(activity.QuestionsJson, Json) ?? [];
+        var questions = graded.Select(q => new QuestionDto(
+            q.Id, q.Prompt, Enum.TryParse<QuestionType>(q.Type, out var t) ? t : QuestionType.ShortAnswer,
+            q.Options, Math.Max(1, q.Points), q.Hint)).ToList();
+
+        return Ok(new ActivityDto(activity.Id, activity.LessonId, activity.Title, activity.Type,
+            activity.MaxScore, activity.PassThresholdPercent, questions));
+    }
+
     [HttpPost("/activities/{id:guid}/start")]
     public async Task<ActionResult<AttemptDto>> Start(Guid id, [FromBody] StartActivityRequest req, CancellationToken ct)
     {

@@ -15,6 +15,7 @@ namespace Cerdik.Web.Services;
 public sealed class ApiClient
 {
     private readonly HttpClient _http;
+    private readonly AccessTokenProvider _tokens;
 
     /// <summary>Shared camelCase, case-insensitive options used by both ApiClient and TutorClient.</summary>
     public static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
@@ -23,12 +24,20 @@ public sealed class ApiClient
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public ApiClient(HttpClient http) => _http = http;
+    public ApiClient(HttpClient http, AccessTokenProvider tokens)
+    {
+        _http = http;
+        _tokens = tokens;
+    }
 
-    /// <summary>Sets (or clears) the bearer access token used for subsequent requests.</summary>
-    public void SetAccessToken(string? token)
+    /// <summary>Sets (or clears) the bearer access token for the current circuit.</summary>
+    public void SetAccessToken(string? token) => _tokens.Token = token;
+
+    /// <summary>Applies the circuit's current bearer token to this request. Called before every call so
+    /// any transient ApiClient instance picks up a token set elsewhere in the same circuit.</summary>
+    private void ApplyAuth()
         => _http.DefaultRequestHeaders.Authorization =
-            string.IsNullOrEmpty(token) ? null : new AuthenticationHeaderValue("Bearer", token);
+            string.IsNullOrEmpty(_tokens.Token) ? null : new AuthenticationHeaderValue("Bearer", _tokens.Token);
 
     // ---------------------------------------------------------------- Auth
     public Task<AuthResponse> RegisterParentAsync(RegisterParentRequest request, CancellationToken ct = default)
@@ -153,30 +162,35 @@ public sealed class ApiClient
     // ------------------------------------------------------- HTTP plumbing
     private async Task<T> GetAsync<T>(string url, CancellationToken ct)
     {
+        ApplyAuth();
         using var response = await _http.GetAsync(url, ct).ConfigureAwait(false);
         return await ReadAsync<T>(response, ct).ConfigureAwait(false);
     }
 
     private async Task<TResponse> PostAsync<TRequest, TResponse>(string url, TRequest body, CancellationToken ct)
     {
+        ApplyAuth();
         using var response = await _http.PostAsJsonAsync(url, body, JsonOptions, ct).ConfigureAwait(false);
         return await ReadAsync<TResponse>(response, ct).ConfigureAwait(false);
     }
 
     private async Task<TResponse> PostAsync<TResponse>(string url, CancellationToken ct)
     {
+        ApplyAuth();
         using var response = await _http.PostAsync(url, content: null, ct).ConfigureAwait(false);
         return await ReadAsync<TResponse>(response, ct).ConfigureAwait(false);
     }
 
     private async Task PostNoContentAsync(string url, CancellationToken ct)
     {
+        ApplyAuth();
         using var response = await _http.PostAsync(url, content: null, ct).ConfigureAwait(false);
         await EnsureSuccessAsync(response, ct).ConfigureAwait(false);
     }
 
     private async Task PostNoContentAsync<TRequest>(string url, TRequest body, CancellationToken ct)
     {
+        ApplyAuth();
         using var response = await _http.PostAsJsonAsync(url, body, JsonOptions, ct).ConfigureAwait(false);
         await EnsureSuccessAsync(response, ct).ConfigureAwait(false);
     }

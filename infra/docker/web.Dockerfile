@@ -23,7 +23,6 @@ RUN apt-get update \
 COPY global.json ./
 COPY Directory.Build.props ./
 COPY Directory.Packages.props ./
-COPY Cerdik.sln ./
 
 # Copy the full source tree.
 COPY src/ ./src/
@@ -34,7 +33,7 @@ RUN if [ -f src/Cerdik.Web/package.json ]; then \
         npm --prefix src/Cerdik.Web ci || npm --prefix src/Cerdik.Web install; \
     fi
 
-RUN dotnet restore Cerdik.sln
+RUN dotnet restore src/Cerdik.Web/Cerdik.Web.csproj
 
 RUN dotnet publish src/Cerdik.Web/Cerdik.Web.csproj \
     -c "$BUILD_CONFIGURATION" \

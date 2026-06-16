@@ -15,13 +15,12 @@ WORKDIR /src
 COPY global.json ./
 COPY Directory.Build.props ./
 COPY Directory.Packages.props ./
-COPY Cerdik.sln ./
 
-# Copy the full source tree (project graph is referenced by the solution).
+# Copy the source tree (the API project graph is referenced transitively).
 COPY src/ ./src/
 
-# Restore the whole solution once (honours Central Package Management).
-RUN dotnet restore Cerdik.sln
+# Restore the API project graph (honours Central Package Management).
+RUN dotnet restore src/Cerdik.Api/Cerdik.Api.csproj
 
 # Publish only the API project. --no-restore reuses the layer above.
 RUN dotnet publish src/Cerdik.Api/Cerdik.Api.csproj \

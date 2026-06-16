@@ -23,8 +23,13 @@ public enum TutorStreamEventKind
 public sealed class TutorClient
 {
     private readonly HttpClient _http;
+    private readonly AccessTokenProvider _tokens;
 
-    public TutorClient(HttpClient http) => _http = http;
+    public TutorClient(HttpClient http, AccessTokenProvider tokens)
+    {
+        _http = http;
+        _tokens = tokens;
+    }
 
     public async IAsyncEnumerable<TutorStreamEvent> StreamMessageAsync(
         Guid sessionId,
@@ -36,6 +41,10 @@ public sealed class TutorClient
             Content = JsonContent.Create(new SendTutorMessageRequest(content), options: ApiClient.JsonOptions),
         };
         request.Headers.Accept.ParseAdd("text/event-stream");
+        if (!string.IsNullOrEmpty(_tokens.Token))
+        {
+            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _tokens.Token);
+        }
 
         using var response = await _http
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct)

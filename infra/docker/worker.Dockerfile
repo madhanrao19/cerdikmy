@@ -13,11 +13,10 @@ WORKDIR /src
 COPY global.json ./
 COPY Directory.Build.props ./
 COPY Directory.Packages.props ./
-COPY Cerdik.sln ./
 
 COPY src/ ./src/
 
-RUN dotnet restore Cerdik.sln
+RUN dotnet restore src/Cerdik.Worker/Cerdik.Worker.csproj
 
 RUN dotnet publish src/Cerdik.Worker/Cerdik.Worker.csproj \
     -c "$BUILD_CONFIGURATION" \
