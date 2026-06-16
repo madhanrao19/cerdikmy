@@ -44,24 +44,16 @@ public class AppDbContext : DbContext
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<PrivacyRequest> PrivacyRequests => Set<PrivacyRequest>();
 
+    /// <summary>Store all enums as readable strings (max 32 chars) rather than integers.</summary>
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.Properties<Enum>().HaveConversion<string>().HaveMaxLength(32);
+    }
+
     protected override void OnModelCreating(ModelBuilder b)
     {
         base.OnModelCreating(b);
-
-        // Store all enums as readable strings rather than ints.
-        foreach (var entityType in b.Model.GetEntityTypes())
-        {
-            foreach (var prop in entityType.GetProperties())
-            {
-                var t = Nullable.GetUnderlyingType(prop.ClrType) ?? prop.ClrType;
-                if (t.IsEnum)
-                {
-                    prop.SetProviderClrType(typeof(string));
-                    prop.SetMaxLength(32);
-                }
-            }
-        }
-
         ApplyEntityConfigurations(b);
     }
 
