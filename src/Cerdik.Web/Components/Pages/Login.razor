@@ -36,10 +36,7 @@
             </div>
 
             <div class="field">
-                <div class="label-row">
-                    <label class="label" for="login-password">Password</label>
-                    <a href="/login" class="forgot">Forgot password?</a>
-                </div>
+                <label class="label" for="login-password">Password</label>
                 <InputText id="login-password" type="password" class="input" @bind-Value="_model.Password"
                            autocomplete="current-password" aria-describedby="login-password-err" />
                 <ValidationMessage For="() => _model.Password" id="login-password-err" role="alert" />
@@ -68,8 +65,6 @@
     .auth-title { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
     .auth-sub { color: #64748b; margin-top: .25rem; margin-bottom: 1.5rem; }
     .field { margin-bottom: 1.1rem; }
-    .label-row { display: flex; align-items: baseline; justify-content: space-between; }
-    .forgot { font-size: .78rem; font-weight: 600; color: var(--accent-600); }
     .auth-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: .6rem .75rem; border-radius: .6rem; font-size: .85rem; margin-bottom: 1rem; }
     .auth-foot { margin-top: 1.5rem; font-size: .9rem; color: #475569; text-align: center; }
     .auth-foot a { color: var(--accent-600); font-weight: 700; }

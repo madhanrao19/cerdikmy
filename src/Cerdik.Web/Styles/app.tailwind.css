@@ -1,29 +1,71 @@
+/* Public Sans — cerdikMY design-system typeface. Imported here so `npm run build:css`
+   produces the same result as the prebuilt wwwroot/css/app.css fallback. */
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* cerdikMY component layer helpers. These compile via `npm run build:css`.
-   A prebuilt fallback ships at wwwroot/css/app.css so the app renders without Node. */
+/* cerdikMY component layer helpers. These compile via `npm run build:css` and MUST stay in
+   sync with the hand-written fallback in wwwroot/css/app.css. */
+@layer base {
+  body {
+    @apply bg-[#f6f8fc] text-slate-900 antialiased;
+    font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+}
+
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    border: 1px solid transparent;
   }
-  .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700;
-  }
-  .btn-secondary {
-    @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
-  }
-  .btn-danger {
-    @apply btn bg-rose-600 text-white hover:bg-rose-700;
-  }
+  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
+  .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50; }
+  .btn-danger { @apply btn bg-rose-600 text-white hover:bg-rose-700; }
+  .btn-accent { @apply btn bg-accent-500 text-white hover:bg-accent-600; }
+  .btn-lg { @apply rounded-xl px-5 py-3 text-[.95rem]; }
+
   .input {
-    @apply w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
+    @apply w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
   }
-  .card {
-    @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
+  .input[aria-invalid="true"] { @apply border-rose-500; }
+
+  .card { @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm; }
+
+  /* Stitch uses small, uppercase, tracked field labels. */
+  .label { @apply mb-1.5 block text-[.72rem] font-bold uppercase tracking-wider text-slate-500; }
+
+  /* brand + accent helpers */
+  .brand-accent { @apply text-accent-500; }
+  .text-accent { @apply text-accent-600; }
+  .bg-accent { @apply bg-accent-500; }
+
+  /* teal rounded logo square (grad-cap svg sits inside) */
+  .logo-mark {
+    @apply inline-flex items-center justify-center rounded-xl bg-accent-500 text-white;
+    width: 2.25rem; height: 2.25rem;
+    box-shadow: 0 4px 10px -4px rgba(20, 184, 166, .6);
   }
-  .label {
-    @apply mb-1 block text-sm font-medium text-slate-700;
-  }
+  .logo-mark svg { width: 1.25rem; height: 1.25rem; }
+
+  /* pill / badge */
+  .pill { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold; }
+  .pill-brand { @apply bg-brand-50 text-brand-700; }
+  .pill-accent { @apply bg-accent-50 text-accent-700; }
+  .pill-danger { @apply bg-rose-50 text-rose-700; }
+  .pill-amber { @apply bg-amber-50 text-amber-700; }
+
+  /* mastery Tahap Penguasaan bands (TP1–TP6) */
+  .tp { @apply inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-extrabold; }
+  .tp-1 { @apply bg-red-100 text-red-700; }
+  .tp-2 { @apply bg-orange-100 text-orange-700; }
+  .tp-3 { @apply bg-yellow-100 text-yellow-700; }
+  .tp-4 { @apply bg-blue-100 text-blue-700; }
+  .tp-5 { @apply bg-cyan-100 text-cyan-700; }
+  .tp-6 { @apply bg-green-100 text-green-700; }
+
+  /* progress track */
+  .track { @apply h-2 overflow-hidden rounded-full bg-slate-200; }
+  .track > span { @apply block h-full rounded-full bg-brand-600; }
 }
