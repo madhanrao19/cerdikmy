@@ -159,6 +159,8 @@ public sealed class TutorController : ControllerBase
                 Language = session.Language,
                 DlpMode = session.DlpMode,
                 TopK = 4,
+                // The offline embedding is coarse; keep top-k grounding rather than threshold it away.
+                MinScore = 0.0,
             }, ct);
         }
 
