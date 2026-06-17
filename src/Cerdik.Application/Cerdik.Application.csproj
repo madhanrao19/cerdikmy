@@ -5,10 +5,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FluentValidation" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Cerdik.Domain\Cerdik.Domain.csproj" />
   </ItemGroup>
 </Project>
