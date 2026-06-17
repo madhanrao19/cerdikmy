@@ -265,7 +265,7 @@ public sealed class DemoDataSeeder
         _db.Subscriptions.Add(sub);
         var invoice = new Invoice { Subscription = sub, Number = "INV-2026-0001", Status = InvoiceStatus.Paid, Currency = "MYR", AmountCents = 4900, PaidAt = DateTimeOffset.UtcNow.AddDays(-5) };
         _db.Invoices.Add(invoice);
-        _db.Payments.Add(new Payment { Subscription = sub, Invoice = invoice, Provider = PaymentProvider.Billplz, ProviderPaymentId = "pay_demo_001", Status = PaymentStatus.Succeeded, Currency = "MYR", AmountCents = 4900, ProcessedAt = DateTimeOffset.UtcNow.AddDays(-5) });
+        _db.Payments.Add(new Payment { Subscription = sub, InvoiceId = invoice.Id, Provider = PaymentProvider.Billplz, ProviderPaymentId = "pay_demo_001", Status = PaymentStatus.Succeeded, Currency = "MYR", AmountCents = 4900, ProcessedAt = DateTimeOffset.UtcNow.AddDays(-5) });
 
         await _db.SaveChangesAsync(ct);
 

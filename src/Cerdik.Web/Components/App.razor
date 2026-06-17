@@ -10,11 +10,11 @@
     <meta name="description" content="cerdikMY — KPM-aligned homeschooling and AI tutoring for Malaysian families." />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="RenderMode.InteractiveServer" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="RenderMode.InteractiveServer" />
     <div id="blazor-error-ui" role="alert">
         An unexpected error has occurred.
         <a href="." class="reload">Reload</a>

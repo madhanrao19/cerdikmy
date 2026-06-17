@@ -1,4 +1,5 @@
 using Cerdik.Application.Abstractions;
+using Cerdik.Application.Ai;
 using Cerdik.Domain;
 
 namespace Cerdik.Infrastructure.Ai;

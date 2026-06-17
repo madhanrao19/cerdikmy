@@ -33,11 +33,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
 
         builder.ConfigureTestServices(services =>
         {
-            // Replace the SQL Server DbContext with an InMemory one shared across the host.
+            // Replace the SQL Server DbContext with an InMemory one shared across the host. We strip
+            // every DbContextOptions-related registration (incl. EF Core 9/10's
+            // IDbContextOptionsConfiguration<AppDbContext>) so the SqlServer provider config can't
+            // collide with InMemory ("multiple providers" error).
             var toRemove = services.Where(d =>
-                d.ServiceType == typeof(DbContextOptions<AppDbContext>) ||
                 d.ServiceType == typeof(AppDbContext) ||
-                (d.ServiceType.IsGenericType && d.ServiceType.GetGenericTypeDefinition() == typeof(DbContextOptions<>))).ToList();
+                (d.ServiceType.FullName?.Contains("DbContextOptions", StringComparison.Ordinal) ?? false)).ToList();
             foreach (var d in toRemove) services.Remove(d);
 
             services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("cerdik-integration-tests"));
