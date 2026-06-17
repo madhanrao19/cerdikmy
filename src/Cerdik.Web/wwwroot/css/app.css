@@ -12,6 +12,9 @@
  * --------------------------------------------------------------------------
  */
 
+/* Public Sans — cerdikMY design-system typeface. Falls back to system fonts offline. */
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
+
 *,
 *::before,
 *::after { box-sizing: border-box; }
@@ -20,12 +23,16 @@
   --brand-50:#eef5ff; --brand-100:#d9e8ff; --brand-200:#bcd6ff; --brand-300:#8ebcff;
   --brand-400:#5996ff; --brand-500:#3470f4; --brand-600:#2152d9; --brand-700:#1c41af;
   --brand-800:#1d3a8a; --brand-900:#1d356f; --brand-950:#152149;
+  /* Cerdik Teal accent */
+  --accent-50:#effcf9; --accent-100:#cbfbef; --accent-400:#2dd4bf;
+  --accent-500:#14b8a6; --accent-600:#0d9488; --accent-700:#0f766e;
+  --radius:8px;
 }
 
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: #f8fafc;
+  font-family: "Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #f6f8fc;
   color: #0f172a;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -167,20 +174,55 @@ button { font-family: inherit; }
 }
 .btn:focus-visible { outline:2px solid var(--brand-500); outline-offset:2px; }
 .btn:disabled { cursor:not-allowed; opacity:.5; }
-.btn-primary { background:var(--brand-600); color:#fff; }
+.btn-primary { background:var(--brand-600); color:#fff; box-shadow:0 1px 2px rgba(33,82,217,.25); }
 .btn-primary:hover:not(:disabled) { background:var(--brand-700); }
-.btn-secondary { border:1px solid #cbd5e1; background:#fff; color:#334155; }
-.btn-secondary:hover:not(:disabled) { background:#f8fafc; }
-.btn-danger { background:#e11d48; color:#fff; }
-.btn-danger:hover:not(:disabled) { background:#be123c; }
+.btn-secondary { border:1px solid #d6deeb; background:#fff; color:#334155; }
+.btn-secondary:hover:not(:disabled) { background:#f6f8fc; }
+.btn-danger { background:#dc2626; color:#fff; }
+.btn-danger:hover:not(:disabled) { background:#b91c1c; }
+.btn-accent { background:var(--accent-500); color:#fff; box-shadow:0 1px 2px rgba(20,184,166,.3); }
+.btn-accent:hover:not(:disabled) { background:var(--accent-600); }
+.btn-lg { padding:.7rem 1.25rem; font-size:.95rem; border-radius:.625rem; }
 .input {
-  width:100%; border:1px solid #cbd5e1; border-radius:.5rem; padding:.5rem .75rem;
-  font-size:.875rem; box-shadow:0 1px 2px 0 rgba(0,0,0,.05); background:#fff;
+  width:100%; border:1px solid #d6deeb; border-radius:.625rem; padding:.6rem .85rem;
+  font-size:.9rem; background:#fff; transition:border-color .15s ease, box-shadow .15s ease;
 }
-.input:focus { outline:none; border-color:var(--brand-500); box-shadow:0 0 0 1px var(--brand-500); }
-.input[aria-invalid="true"] { border-color:#e11d48; }
-.card { border-radius:.75rem; border:1px solid #e2e8f0; background:#fff; padding:1rem; box-shadow:0 1px 2px 0 rgba(0,0,0,.05); }
-.label { display:block; margin-bottom:.25rem; font-size:.875rem; font-weight:500; color:#334155; }
+.input:focus { outline:none; border-color:var(--brand-500); box-shadow:0 0 0 3px rgba(52,112,244,.18); }
+.input[aria-invalid="true"] { border-color:#dc2626; }
+.card { border-radius:1rem; border:1px solid #e8edf6; background:#fff; padding:1.25rem; box-shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px -18px rgba(15,23,42,.25); }
+/* Stitch uses small, uppercase, tracked field labels. */
+.label { display:block; margin-bottom:.4rem; font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#64748b; }
+
+/* accent + brand helpers */
+.brand-accent { color:var(--accent-500); }
+.text-accent { color:var(--accent-600); }
+.bg-accent { background:var(--accent-500); }
+.bg-accent-50 { background:var(--accent-50); }
+.bg-navy { background:var(--brand-950); }
+
+/* logo mark (teal rounded square with cap) */
+.logo-mark { display:inline-flex; align-items:center; justify-content:center; width:2.25rem; height:2.25rem; border-radius:.625rem; background:var(--accent-500); color:#fff; box-shadow:0 4px 10px -4px rgba(20,184,166,.6); }
+.logo-mark svg { width:1.25rem; height:1.25rem; }
+
+/* pill / badge */
+.pill { display:inline-flex; align-items:center; gap:.3rem; font-size:.7rem; font-weight:700; letter-spacing:.02em; padding:.2rem .6rem; border-radius:9999px; }
+.pill-brand { background:var(--brand-50); color:var(--brand-700); }
+.pill-accent { background:var(--accent-50); color:var(--accent-700); }
+.pill-danger { background:#fef2f2; color:#b91c1c; }
+.pill-amber { background:#fffbeb; color:#b45309; }
+
+/* mastery Tahap Penguasaan bands (TP1–TP6) */
+.tp { display:inline-flex; align-items:center; justify-content:center; font-weight:800; font-size:.72rem; padding:.2rem .55rem; border-radius:9999px; }
+.tp-1 { background:#fee2e2; color:#b91c1c; }
+.tp-2 { background:#ffedd5; color:#c2410c; }
+.tp-3 { background:#fef9c3; color:#a16207; }
+.tp-4 { background:#dbeafe; color:#1d4ed8; }
+.tp-5 { background:#cffafe; color:#0e7490; }
+.tp-6 { background:#dcfce7; color:#15803d; }
+
+/* progress track */
+.track { height:.5rem; background:#e8edf6; border-radius:9999px; overflow:hidden; }
+.track > span { display:block; height:100%; background:var(--brand-600); border-radius:9999px; }
 
 /* validation messages */
 .validation-message, .field-validation-error { color:#e11d48; font-size:.8125rem; margin-top:.25rem; }
