@@ -26,7 +26,7 @@ public class LearningFlowTests
 
     private async Task<Guid> FirstStudentIdAsync(HttpClient client)
     {
-        var me = await client.GetFromJsonAsync<MeResponse>("/me");
+        var me = await client.GetFromJsonAsync<MeResponse>("/me", TestJson.Options);
         return me!.Students[0].Id;
     }
 
@@ -40,7 +40,7 @@ public class LearningFlowTests
             new CreateTutorSessionRequest(studentId, null, null, "Help with addition"));
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var session = await resp.Content.ReadFromJsonAsync<TutorSessionDto>();
+        var session = await resp.Content.ReadFromJsonAsync<TutorSessionDto>(TestJson.Options);
         session!.Id.Should().NotBeEmpty();
         session.StudentId.Should().Be(studentId);
         session.CurriculumVersionCode.Should().NotBeNullOrEmpty();
@@ -63,13 +63,13 @@ public class LearningFlowTests
 
         var sessionResp = await client.PostAsJsonAsync("/tutor/sessions",
             new CreateTutorSessionRequest(studentId, variantId, null, "Maths"));
-        var session = await sessionResp.Content.ReadFromJsonAsync<TutorSessionDto>();
+        var session = await sessionResp.Content.ReadFromJsonAsync<TutorSessionDto>(TestJson.Options);
 
         var reply = await client.PostAsJsonAsync($"/tutor/sessions/{session!.Id}/messages",
             new SendTutorMessageRequest("Macam mana nak kira 3 + 4?"));
         reply.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var dto = await reply.Content.ReadFromJsonAsync<TutorReplyDto>();
+        var dto = await reply.Content.ReadFromJsonAsync<TutorReplyDto>(TestJson.Options);
         dto!.AnswerMarkdown.Should().NotBeNullOrEmpty();
         dto.Citations.Should().NotBeEmpty("the SK maths lesson is indexed and retrievable");
     }
@@ -90,13 +90,13 @@ public class LearningFlowTests
 
         var start = await client.PostAsJsonAsync($"/activities/{activityId}/start", new StartActivityRequest(studentId));
         start.StatusCode.Should().Be(HttpStatusCode.OK);
-        var attempt = await start.Content.ReadFromJsonAsync<AttemptDto>();
+        var attempt = await start.Content.ReadFromJsonAsync<AttemptDto>(TestJson.Options);
 
         var answers = new Dictionary<string, string> { ["m1"] = "7", ["m2"] = "7", ["m3"] = "Palsu" };
         var submit = await client.PostAsJsonAsync($"/attempts/{attempt!.Id}/submit", new SubmitAttemptRequest(answers));
         submit.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var result = await submit.Content.ReadFromJsonAsync<AttemptResultDto>();
+        var result = await submit.Content.ReadFromJsonAsync<AttemptResultDto>(TestJson.Options);
         result!.MaxScore.Should().BeGreaterThan(0);
         result.Score.Should().Be(result.MaxScore, "all submitted answers are correct");
         result.Passed.Should().BeTrue();
@@ -111,7 +111,7 @@ public class LearningFlowTests
         var resp = await client.GetAsync("/parents/dashboard");
         resp.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var dashboard = await resp.Content.ReadFromJsonAsync<ParentDashboardDto>();
+        var dashboard = await resp.Content.ReadFromJsonAsync<ParentDashboardDto>(TestJson.Options);
         dashboard!.Children.Should().NotBeEmpty();
         dashboard.HouseholdName.Should().NotBeNullOrEmpty();
     }

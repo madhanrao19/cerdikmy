@@ -26,12 +26,12 @@ public class AuthTests
             new RegisterParentRequest(email, "Sup3r!Secret", "New Parent", "New Household", "BM"));
         register.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var auth = await register.Content.ReadFromJsonAsync<AuthResponse>();
+        var auth = await register.Content.ReadFromJsonAsync<AuthResponse>(TestJson.Options);
         auth!.User.Email.Should().Be(email);
         auth.AccessToken.Should().NotBeNullOrEmpty();
 
         // The auth cookie set by register should authenticate /me.
-        var me = await client.GetFromJsonAsync<MeResponse>("/me");
+        var me = await client.GetFromJsonAsync<MeResponse>("/me", TestJson.Options);
         me!.User.Email.Should().Be(email);
         me.Features.Should().ContainKey("lang.bm");
     }
@@ -45,7 +45,7 @@ public class AuthTests
             new LoginRequest(ApiFactory.ParentEmail, ApiFactory.ParentPassword));
         login.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        var me = await client.GetFromJsonAsync<MeResponse>("/me");
+        var me = await client.GetFromJsonAsync<MeResponse>("/me", TestJson.Options);
         me!.Students.Should().NotBeEmpty("the seeded parent guardians at least one student");
     }
 
