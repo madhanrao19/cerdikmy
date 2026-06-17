@@ -16,15 +16,16 @@
     .nav-link {
         display: flex;
         align-items: center;
-        gap: .6rem;
-        padding: .55rem .75rem;
-        border-radius: .5rem;
+        gap: .65rem;
+        padding: .6rem .75rem;
+        border-radius: .625rem;
         font-size: .9rem;
-        font-weight: 500;
-        color: #cbd5e1;
+        font-weight: 600;
+        color: #475569;
+        border-left: 3px solid transparent;
     }
-    .nav-link:hover { background: rgba(255,255,255,.08); color: #fff; }
-    .nav-link.active { background: var(--brand-600); color: #fff; }
+    .nav-link:hover { background: #f3f6fc; color: #1d4ed8; }
+    .nav-link.active { background: var(--brand-50); color: var(--brand-700); border-left-color: var(--brand-600); }
     .nav-link:focus-visible { outline: 2px solid var(--brand-300); outline-offset: 2px; }
     .nav-icon { width: 1.25rem; text-align: center; }
 </style>

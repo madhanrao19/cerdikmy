@@ -6,9 +6,18 @@
 <PageTitle>Create account — cerdikMY</PageTitle>
 
 <div class="auth-page">
+    <div class="auth-brand-block">
+        <span class="logo-mark logo-mark-lg" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3 1.5 8.5 12 14l9-4.7V15h2V8.5L12 3Z" fill="currentColor"/>
+                <path d="M5 11.3V15c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.7l-7 3.7-7-3.7Z" fill="currentColor"/>
+            </svg>
+        </span>
+        <div class="auth-wordmark">cerdik<span class="brand-accent">MY</span></div>
+        <div class="auth-tag">Malaysian Homeschooling Portal</div>
+    </div>
     <div class="auth-card">
-        <a href="/" class="auth-brand">cerdik<span class="brand-accent">MY</span></a>
-        <h1 class="auth-title">Create a parent account</h1>
+        <h1 class="auth-title">Create an account</h1>
         <p class="auth-sub">Set up your household to start your children's learning journey.</p>
 
         <EditForm Model="_model" OnValidSubmit="SubmitAsync" FormName="register">
@@ -57,8 +66,8 @@
                 </InputSelect>
             </div>
 
-            <button type="submit" class="btn-primary w-full" disabled="@_busy">
-                @(_busy ? "Creating account…" : "Create account")
+            <button type="submit" class="btn-accent btn-lg w-full" disabled="@_busy">
+                @(_busy ? "Creating account…" : "Create account →")
             </button>
         </EditForm>
 
@@ -69,15 +78,19 @@
 </div>
 
 <style>
-    .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: linear-gradient(160deg, var(--brand-50), #fff); }
-    .auth-card { width: 100%; max-width: 28rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 1rem; padding: 2rem; box-shadow: 0 10px 30px -12px rgba(15,23,42,.25); }
-    .auth-brand { display: block; font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 1.25rem; }
-    .auth-title { font-size: 1.5rem; font-weight: 700; color: #0f172a; }
-    .auth-sub { color: #64748b; margin-top: .25rem; margin-bottom: 1.25rem; }
-    .field { margin-bottom: 1rem; }
-    .auth-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: .6rem .75rem; border-radius: .5rem; font-size: .85rem; margin-bottom: 1rem; }
-    .auth-foot { margin-top: 1.25rem; font-size: .85rem; color: #64748b; text-align: center; }
-    .auth-foot a { color: var(--brand-600); font-weight: 600; }
+    .auth-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: linear-gradient(160deg, #eef5ff 0%, #f6f8fc 45%, #fff 100%); }
+    .auth-brand-block { text-align: center; margin-bottom: 1.5rem; }
+    .logo-mark-lg { width: 3.25rem; height: 3.25rem; border-radius: .9rem; }
+    .logo-mark-lg svg { width: 1.8rem; height: 1.8rem; }
+    .auth-wordmark { font-size: 1.85rem; font-weight: 800; color: #0f172a; letter-spacing: -.02em; margin-top: .6rem; }
+    .auth-tag { font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #94a3b8; margin-top: .15rem; }
+    .auth-card { width: 100%; max-width: 28rem; background: #fff; border: 1px solid #e8edf6; border-radius: 1.25rem; padding: 2rem; box-shadow: 0 18px 48px -20px rgba(15,23,42,.3); }
+    .auth-title { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+    .auth-sub { color: #64748b; margin-top: .25rem; margin-bottom: 1.5rem; }
+    .field { margin-bottom: 1.1rem; }
+    .auth-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: .6rem .75rem; border-radius: .6rem; font-size: .85rem; margin-bottom: 1rem; }
+    .auth-foot { margin-top: 1.5rem; font-size: .9rem; color: #475569; text-align: center; }
+    .auth-foot a { color: var(--accent-600); font-weight: 700; }
     .w-full { width: 100%; }
 </style>
 
