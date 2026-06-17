@@ -16,22 +16,23 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string ParentEmail = "parent.demo@cerdik.my";
     public const string ParentPassword = "Demo!2345";
 
+    // Program.cs reads configuration (DATABASE_URL, environment) BEFORE builder.Build(), so the
+    // factory's ConfigureAppConfiguration/UseEnvironment (applied at build time) would be too late.
+    // Set them as real process env vars here so they're visible when the host's entry point runs.
+    static ApiFactory()
+    {
+        Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Testing");
+        Environment.SetEnvironmentVariable("SEED_ON_STARTUP", "false");
+        Environment.SetEnvironmentVariable("AI_PROVIDER", "mock");
+        Environment.SetEnvironmentVariable("STORAGE_PROVIDER", "s3");
+        Environment.SetEnvironmentVariable("DATABASE_URL", "Server=(testing);Database=cerdik;Trusted_Connection=True;");
+        Environment.SetEnvironmentVariable("JWT_ACCESS_SECRET", "test-access-secret-at-least-32-characters-long!");
+        Environment.SetEnvironmentVariable("JWT_REFRESH_SECRET", "test-refresh-secret-at-least-32-characters-long");
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-
-        builder.ConfigureAppConfiguration((_, config) =>
-        {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["DATABASE_URL"] = "Server=(testing);Database=cerdik;Trusted_Connection=True;", // unused (replaced below)
-                ["SEED_ON_STARTUP"] = "false",
-                ["AI_PROVIDER"] = "mock",
-                ["STORAGE_PROVIDER"] = "s3",
-                ["JWT_ACCESS_SECRET"] = "test-access-secret-at-least-32-characters-long!",
-                ["JWT_REFRESH_SECRET"] = "test-refresh-secret-at-least-32-characters-long",
-            });
-        });
 
         builder.ConfigureTestServices(services =>
         {
