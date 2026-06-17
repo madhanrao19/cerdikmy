@@ -50,10 +50,18 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_gcServer=1
 
+# curl is used by the container HEALTHCHECK below.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish ./
 
 USER $APP_UID
 
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://localhost:8080/ || exit 1
 
 ENTRYPOINT ["dotnet", "Cerdik.Web.dll"]

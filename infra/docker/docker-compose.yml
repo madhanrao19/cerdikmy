@@ -185,7 +185,7 @@ services:
     container_name: cerdik-web
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: "Production"
       ASPNETCORE_URLS: "http://+:8080"

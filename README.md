@@ -240,3 +240,6 @@ dotnet test tests/Cerdik.E2E
   Container Apps + Azure SQL + Blob Storage via Bicep.
 - [docs/privacy-and-safety.md](docs/privacy-and-safety.md) — PDPA consent, export
   & delete/anonymize flows, child safety, audit logging, copyright rule.
+- [docs/production-readiness.md](docs/production-readiness.md) — rate limiting,
+  health checks, security headers, fail-fast config, and the pre-production checklist
+  (migrations, dependency audit, secrets, backups, monitoring, scaling).

@@ -8,6 +8,7 @@ using Cerdik.Domain.Entities;
 using Cerdik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cerdik.Api.Controllers;
@@ -15,6 +16,7 @@ namespace Cerdik.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("tutor")]
+[EnableRateLimiting(RateLimitingSetup.Tutor)]
 public sealed class TutorController : ControllerBase
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

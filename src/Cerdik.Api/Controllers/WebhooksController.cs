@@ -4,12 +4,14 @@ using Cerdik.Domain.Entities;
 using Cerdik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cerdik.Api.Controllers;
 
 [ApiController]
 [AllowAnonymous]
+[DisableRateLimiting] // payment webhooks must never be dropped by the limiter
 public sealed class WebhooksController : ControllerBase
 {
     private readonly AppDbContext _db;
