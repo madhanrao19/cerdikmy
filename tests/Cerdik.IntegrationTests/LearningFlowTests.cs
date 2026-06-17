@@ -1,0 +1,118 @@
+using System.Net;
+using System.Net.Http.Json;
+using Cerdik.Application.Dtos;
+using Cerdik.Domain;
+using FluentAssertions;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
+
+namespace Cerdik.IntegrationTests;
+
+[Collection("api")]
+public class LearningFlowTests
+{
+    private readonly ApiFactory _factory;
+
+    public LearningFlowTests(SeededApiFixture fixture) => _factory = fixture.Factory;
+
+    private async Task<HttpClient> LoginAsParentAsync()
+    {
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = true });
+        var login = await client.PostAsJsonAsync("/auth/login", new LoginRequest(ApiFactory.ParentEmail, ApiFactory.ParentPassword));
+        login.EnsureSuccessStatusCode();
+        return client;
+    }
+
+    private async Task<Guid> FirstStudentIdAsync(HttpClient client)
+    {
+        var me = await client.GetFromJsonAsync<MeResponse>("/me", TestJson.Options);
+        return me!.Students[0].Id;
+    }
+
+    [Fact]
+    public async Task Create_tutor_session_returns_session_with_curriculum_context()
+    {
+        var client = await LoginAsParentAsync();
+        var studentId = await FirstStudentIdAsync(client);
+
+        var resp = await client.PostAsJsonAsync("/tutor/sessions",
+            new CreateTutorSessionRequest(studentId, null, null, "Help with addition"));
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var session = await resp.Content.ReadFromJsonAsync<TutorSessionDto>(TestJson.Options);
+        session!.Id.Should().NotBeEmpty();
+        session.StudentId.Should().Be(studentId);
+        session.CurriculumVersionCode.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Tutor_message_returns_grounded_answer_with_citations()
+    {
+        var client = await LoginAsParentAsync();
+
+        // Use a session bound to the seeded SK Maths variant so retrieval has approved chunks.
+        Guid studentId, variantId;
+        using (var db = _factory.NewDbContext())
+        {
+            var student = await db.Students.FirstAsync(s => s.DisplayName == "Aisyah");
+            studentId = student.Id;
+            variantId = await db.SubjectVariants.Where(v => v.SchoolType == SchoolType.SK && v.Language == Language.BM)
+                .Select(v => v.Id).FirstAsync();
+        }
+
+        var sessionResp = await client.PostAsJsonAsync("/tutor/sessions",
+            new CreateTutorSessionRequest(studentId, variantId, null, "Maths"));
+        var session = await sessionResp.Content.ReadFromJsonAsync<TutorSessionDto>(TestJson.Options);
+
+        var reply = await client.PostAsJsonAsync($"/tutor/sessions/{session!.Id}/messages",
+            new SendTutorMessageRequest("Macam mana nak kira 3 + 4?"));
+        reply.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var dto = await reply.Content.ReadFromJsonAsync<TutorReplyDto>(TestJson.Options);
+        dto!.AnswerMarkdown.Should().NotBeNullOrEmpty();
+        dto.Citations.Should().NotBeEmpty("the SK maths lesson is indexed and retrievable");
+    }
+
+    [Fact]
+    public async Task Submit_attempt_grades_and_records_progress()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid activityId, studentId;
+        using (var db = _factory.NewDbContext())
+        {
+            var student = await db.Students.FirstAsync(s => s.DisplayName == "Aisyah");
+            studentId = student.Id;
+            // The SK maths quiz with question "m1" (answer 7).
+            activityId = await db.Activities.Where(a => a.QuestionsJson.Contains("\"m1\"")).Select(a => a.Id).FirstAsync();
+        }
+
+        var start = await client.PostAsJsonAsync($"/activities/{activityId}/start", new StartActivityRequest(studentId));
+        start.StatusCode.Should().Be(HttpStatusCode.OK);
+        var attempt = await start.Content.ReadFromJsonAsync<AttemptDto>(TestJson.Options);
+
+        var answers = new Dictionary<string, string> { ["m1"] = "7", ["m2"] = "7", ["m3"] = "Palsu" };
+        var submit = await client.PostAsJsonAsync($"/attempts/{attempt!.Id}/submit", new SubmitAttemptRequest(answers));
+        submit.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = await submit.Content.ReadFromJsonAsync<AttemptResultDto>(TestJson.Options);
+        result!.MaxScore.Should().BeGreaterThan(0);
+        result.Score.Should().Be(result.MaxScore, "all submitted answers are correct");
+        result.Passed.Should().BeTrue();
+        result.TahapPenguasaan.Should().BeOneOf(MasteryBand.TP1, MasteryBand.TP2, MasteryBand.TP3, MasteryBand.TP4, MasteryBand.TP5, MasteryBand.TP6);
+    }
+
+    [Fact]
+    public async Task Parent_dashboard_returns_children_overview()
+    {
+        var client = await LoginAsParentAsync();
+
+        var resp = await client.GetAsync("/parents/dashboard");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var dashboard = await resp.Content.ReadFromJsonAsync<ParentDashboardDto>(TestJson.Options);
+        dashboard!.Children.Should().NotBeEmpty();
+        dashboard.HouseholdName.Should().NotBeNullOrEmpty();
+    }
+}

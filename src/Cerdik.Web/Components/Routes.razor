@@ -1,0 +1,18 @@
+@* Application router. The default layout is MainLayout; individual pages
+   additionally wrap their content in AppShell + RoleGuard. *@
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <PageTitle>Page not found — cerdikMY</PageTitle>
+            <section class="mx-auto max-w-md p-8 text-center" role="alert">
+                <h1 class="text-2xl font-bold text-slate-900">Page not found</h1>
+                <p class="mt-2 text-slate-600">Sorry, we couldn't find that page.</p>
+                <a class="btn-primary mt-6" href="/">Back to home</a>
+            </section>
+        </LayoutView>
+    </NotFound>
+</Router>

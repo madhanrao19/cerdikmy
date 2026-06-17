@@ -1,0 +1,86 @@
+@implements IDisposable
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+@* Authenticated application chrome: brand header, role-aware sidebar nav,
+   student switcher (parents) and the routed page content. *@
+<div class="app-shell">
+    <header class="app-header">
+        <div class="app-header-inner">
+            <button class="menu-toggle md:hidden" type="button" @onclick="ToggleNav"
+                    aria-expanded="@_navOpen.ToString().ToLowerInvariant()" aria-controls="app-sidebar"
+                    aria-label="Toggle navigation menu">
+                <span aria-hidden="true">☰</span>
+            </button>
+            <a href="/" class="brand">
+                <span class="brand-mark" aria-hidden="true">cM</span>
+                <span class="brand-text">cerdik<span class="brand-accent">MY</span></span>
+            </a>
+            <div class="header-spacer"></div>
+            @if (Auth.Role == UserRole.Parent && Auth.Students.Count > 0)
+            {
+                <div class="hidden sm:block"><StudentSwitcher /></div>
+            }
+            @if (Auth.IsAuthenticated)
+            {
+                <div class="user-box">
+                    <span class="user-name" title="@Auth.User?.Email">@(Auth.User?.FullName ?? Auth.User?.Email)</span>
+                    <span class="role-pill">@Auth.Role</span>
+                    <button class="btn-secondary" type="button" @onclick="LogoutAsync">Sign out</button>
+                </div>
+            }
+        </div>
+    </header>
+
+    <div class="app-body">
+        <aside id="app-sidebar" class="app-sidebar @(_navOpen ? "open" : "")" aria-label="Sidebar">
+            <NavMenu />
+        </aside>
+
+        <main id="main-content" class="app-main" tabindex="-1">
+            @ChildContent
+        </main>
+    </div>
+</div>
+
+<style>
+    .app-shell { display: flex; flex-direction: column; min-height: 100vh; background: #f8fafc; }
+    .app-header { position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid #e2e8f0; }
+    .app-header-inner { display: flex; align-items: center; gap: .75rem; max-width: 88rem; margin: 0 auto; padding: .6rem 1rem; }
+    .menu-toggle { background: transparent; border: 1px solid #cbd5e1; border-radius: .5rem; padding: .35rem .6rem; font-size: 1.1rem; cursor: pointer; }
+    .brand { display: flex; align-items: center; gap: .5rem; font-weight: 700; font-size: 1.15rem; color: #0f172a; }
+    .brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: .5rem; background: var(--brand-600); color: #fff; font-size: .85rem; }
+    .brand-accent { color: var(--brand-600); }
+    .header-spacer { flex: 1 1 auto; }
+    .user-box { display: flex; align-items: center; gap: .6rem; }
+    .user-name { font-size: .85rem; color: #334155; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .role-pill { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; background: var(--brand-50); color: var(--brand-700); padding: .15rem .5rem; border-radius: 9999px; }
+    .app-body { display: flex; flex: 1 1 auto; max-width: 88rem; width: 100%; margin: 0 auto; }
+    .app-sidebar { background: #0f172a; color: #cbd5e1; padding: 1rem .75rem; width: 15rem; flex-shrink: 0; }
+    .app-main { flex: 1 1 auto; padding: 1.25rem 1rem 3rem; min-width: 0; }
+    @@media (max-width: 767px) {
+        .app-sidebar { display: none; position: fixed; top: 3.4rem; bottom: 0; left: 0; z-index: 25; box-shadow: 2px 0 8px rgba(0,0,0,.2); }
+        .app-sidebar.open { display: block; }
+    }
+    @@media (min-width: 768px) {
+        .app-main { padding: 1.5rem 2rem 3rem; }
+    }
+</style>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private bool _navOpen;
+
+    private void ToggleNav() => _navOpen = !_navOpen;
+
+    private async Task LogoutAsync()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: false);
+    }
+
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
+}

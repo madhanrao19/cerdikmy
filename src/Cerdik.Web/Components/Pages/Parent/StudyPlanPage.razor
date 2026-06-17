@@ -1,0 +1,203 @@
+@page "/parent/plan"
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+
+<PageTitle>Study plans — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Parent })">
+        <h1 class="page-title">Create a study plan</h1>
+        <p class="page-sub mb-6">Set daily learning targets and a weekly subject schedule.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading…</p>
+        }
+        else
+        {
+            <div class="plan-layout">
+                <form class="card plan-form" @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+                    @if (_error is not null)
+                    {
+                        <p class="text-rose-700" role="alert">@_error</p>
+                    }
+                    @if (_success is not null)
+                    {
+                        <p class="text-emerald-700" role="status">@_success</p>
+                    }
+
+                    <div class="field">
+                        <label class="label" for="plan-student">Student</label>
+                        <select id="plan-student" class="input" value="@_studentId" @onchange="OnStudentChanged" required>
+                            @foreach (var s in Auth.Students)
+                            {
+                                <option value="@s.Id">@s.DisplayName</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label class="label" for="plan-name">Plan name</label>
+                        <input id="plan-name" class="input" @bind="_name" required maxlength="80"
+                               placeholder="e.g. Term 1 routine" />
+                    </div>
+
+                    <div class="field">
+                        <label class="label" for="plan-target">Target minutes per day</label>
+                        <input id="plan-target" class="input" type="number" min="5" max="600" step="5"
+                               @bind="_targetMinutes" required />
+                    </div>
+
+                    <fieldset class="schedule">
+                        <legend class="label">Weekly schedule</legend>
+                        @foreach (var day in Days)
+                        {
+                            var slot = _schedule[day];
+                            <div class="schedule-row">
+                                <span class="schedule-day">@day</span>
+                                <label class="sr-only" for="@($"subj-{day}")">Subject for @day</label>
+                                <select id="@($"subj-{day}")" class="input" value="@slot.SubjectId"
+                                        @onchange="e => SetSubject(day, e)">
+                                    <option value="">— none —</option>
+                                    @foreach (var subj in _subjects)
+                                    {
+                                        <option value="@subj.Id">@subj.Name</option>
+                                    }
+                                </select>
+                                <label class="sr-only" for="@($"min-{day}")">Minutes for @day</label>
+                                <input id="@($"min-{day}")" class="input schedule-min" type="number" min="0" max="240"
+                                       step="5" value="@slot.Minutes" @onchange="e => SetMinutes(day, e)" />
+                            </div>
+                        }
+                    </fieldset>
+
+                    <button type="submit" class="btn-primary" disabled="@_busy">
+                        @(_busy ? "Saving…" : "Save study plan")
+                    </button>
+                </form>
+
+                <aside class="card plan-preview" aria-label="Plan preview">
+                    <h2 class="preview-title">Preview</h2>
+                    <p class="preview-target">Daily target: <strong>@_targetMinutes min</strong></p>
+                    <ul class="preview-list">
+                        @foreach (var day in Days)
+                        {
+                            var slot = _schedule[day];
+                            var subj = _subjects.FirstOrDefault(s => s.Id == slot.SubjectId);
+                            <li>
+                                <span class="preview-day">@day</span>
+                                <span>@(subj?.Name ?? "Rest day")@(slot.Minutes > 0 && subj is not null ? $" · {slot.Minutes} min" : "")</span>
+                            </li>
+                        }
+                    </ul>
+                </aside>
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .plan-layout { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    .plan-form { display: flex; flex-direction: column; gap: 1rem; }
+    .field { display: flex; flex-direction: column; }
+    .schedule { border: 1px solid #e2e8f0; border-radius: .6rem; padding: 1rem; display: flex; flex-direction: column; gap: .5rem; }
+    .schedule-row { display: grid; grid-template-columns: 4.5rem 1fr 5.5rem; gap: .5rem; align-items: center; }
+    .schedule-day { font-weight: 600; color: #334155; font-size: .85rem; }
+    .schedule-min { text-align: right; }
+    .plan-preview { align-self: start; }
+    .preview-title { font-weight: 700; color: #0f172a; }
+    .preview-target { color: #475569; margin: .5rem 0 1rem; }
+    .preview-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; font-size: .85rem; }
+    .preview-list li { display: flex; justify-content: space-between; gap: 1rem; color: #334155; }
+    .preview-day { font-weight: 600; }
+    @@media (min-width: 1024px) { .plan-layout { grid-template-columns: 2fr 1fr; } }
+</style>
+
+@code {
+    private static readonly string[] Days =
+        { "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday" };
+
+    private sealed class SlotModel { public Guid? SubjectId { get; set; } public int Minutes { get; set; } }
+
+    private readonly Dictionary<string, SlotModel> _schedule =
+        Days.ToDictionary(d => d, _ => new SlotModel { Minutes = 30 });
+
+    private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
+    private Guid _studentId;
+    private string _name = "";
+    private int _targetMinutes = 60;
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+    private string? _success;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Current.EnsureDefault(Auth.Students);
+        _studentId = Current.StudentId ?? Auth.Students.FirstOrDefault()?.Id ?? Guid.Empty;
+        try
+        {
+            // Load subjects scoped to the selected student's level/profile.
+            var student = Auth.Students.FirstOrDefault(s => s.Id == _studentId);
+            var filter = student is null
+                ? new CurriculumFilter()
+                : new CurriculumFilter(Level: student.Level, SchoolType: student.SchoolType,
+                    Language: student.PrimaryLanguage, DlpMode: student.DlpMode);
+            _subjects = await Api.GetSubjectsAsync(filter);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OnStudentChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id)) _studentId = id;
+    }
+
+    private void SetSubject(string day, ChangeEventArgs e)
+        => _schedule[day].SubjectId = Guid.TryParse(e.Value?.ToString(), out var id) ? id : null;
+
+    private void SetMinutes(string day, ChangeEventArgs e)
+        => _schedule[day].Minutes = int.TryParse(e.Value?.ToString(), out var m) ? m : 0;
+
+    private async Task SubmitAsync()
+    {
+        _error = _success = null;
+        if (_studentId == Guid.Empty) { _error = "Please select a student."; return; }
+        if (string.IsNullOrWhiteSpace(_name)) { _error = "Please name your plan."; return; }
+
+        var slots = _schedule
+            .Where(kv => kv.Value.SubjectId is not null && kv.Value.Minutes > 0)
+            .Select(kv => new StudyPlanSlot(kv.Key, kv.Value.SubjectId!.Value, kv.Value.Minutes))
+            .ToList();
+
+        _busy = true;
+        try
+        {
+            var plan = await Api.CreateStudyPlanAsync(
+                new StudyPlanRequest(_studentId, _name.Trim(), _targetMinutes, slots));
+            _success = $"Saved study plan \"{plan.Name}\".";
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't save the study plan. Please try again.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

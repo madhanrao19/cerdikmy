@@ -1,0 +1,158 @@
+@page "/parent/report/{StudentId:guid}"
+@inject ApiClient Api
+@inject IJSRuntime JS
+
+<PageTitle>Progress report — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Parent })">
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading report…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else if (_progress is not null)
+        {
+            <div class="report-toolbar no-print">
+                <a class="btn-secondary" href="/parent">Back to dashboard</a>
+                <button class="btn-primary" @onclick="PrintAsync">🖨️ Print report</button>
+            </div>
+
+            <article class="report" id="printable-report">
+                <header class="report-head">
+                    <div>
+                        <p class="report-brand">cerdik<span class="brand-accent">MY</span> · Progress report</p>
+                        <h1 class="report-name">@_progress.StudentName</h1>
+                        <p class="report-date">Generated @DateTime.Now.ToString("d MMMM yyyy")</p>
+                    </div>
+                    <MasteryBadge Band="_progress.OverallBand" />
+                </header>
+
+                <section class="report-summary" aria-label="Summary">
+                    <div class="summary-tile">
+                        <span class="summary-label">Overall mastery</span>
+                        <span class="summary-value">@MasteryPct(_progress.OverallMastery)%</span>
+                    </div>
+                    <div class="summary-tile">
+                        <span class="summary-label">Lessons completed</span>
+                        <span class="summary-value">@_progress.LessonsCompleted / @_progress.TotalLessons</span>
+                    </div>
+                    <div class="summary-tile">
+                        <span class="summary-label">Badges earned</span>
+                        <span class="summary-value">@_progress.Badges.Count</span>
+                    </div>
+                </section>
+
+                <section aria-labelledby="report-subjects-h">
+                    <h2 id="report-subjects-h" class="report-section-title">Subject mastery</h2>
+                    <table class="report-table">
+                        <thead>
+                            <tr><th>Subject</th><th>Mastery</th><th>Band</th><th>Lessons</th><th>Last active</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in _progress.Subjects)
+                            {
+                                <tr>
+                                    <td>@s.SubjectName</td>
+                                    <td>@MasteryPct(s.MasteryScore)%</td>
+                                    <td><MasteryBadge Band="s.Band" ShowLabel="false" /></td>
+                                    <td>@s.LessonsCompleted / @s.TotalLessons</td>
+                                    <td>@(s.LastActivityAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </section>
+
+                <section aria-labelledby="report-activity-h">
+                    <h2 id="report-activity-h" class="report-section-title">Activity (last 12 weeks)</h2>
+                    <ProgressHeatmap Cells="_progress.Heatmap" />
+                </section>
+
+                @if (_progress.Badges.Count > 0)
+                {
+                    <section aria-labelledby="report-badges-h">
+                        <h2 id="report-badges-h" class="report-section-title">Badges</h2>
+                        <ul class="report-badges">
+                            @foreach (var b in _progress.Badges)
+                            {
+                                <li>
+                                    <span class="badge-icon" aria-hidden="true">@(b.Icon ?? "🏅")</span>
+                                    <span>@b.Name</span>
+                                    <span class="badge-date">@b.AwardedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                </li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </article>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .report-toolbar { display: flex; gap: .5rem; justify-content: flex-end; margin-bottom: 1rem; }
+    .report { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 2rem; max-width: 52rem; }
+    .report-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; }
+    .report-brand { font-weight: 700; color: var(--brand-700); }
+    .report-name { font-size: 1.75rem; font-weight: 800; color: #0f172a; }
+    .report-date { color: #64748b; font-size: .85rem; }
+    .report-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+    .summary-tile { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; padding: 1rem; }
+    .summary-label { display: block; font-size: .75rem; color: #64748b; }
+    .summary-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
+    .report-section-title { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin: 1.5rem 0 .75rem; }
+    .report-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    .report-table th { text-align: left; background: #f8fafc; padding: .5rem .75rem; border-bottom: 1px solid #e2e8f0; color: #475569; }
+    .report-table td { padding: .5rem .75rem; border-bottom: 1px solid #f1f5f9; }
+    .report-badges { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+    .report-badges li { display: flex; align-items: center; gap: .6rem; font-size: .9rem; }
+    .badge-date { margin-left: auto; color: #64748b; font-size: .8rem; }
+    @@media print {
+        .no-print, .app-header, .app-sidebar { display: none !important; }
+        .report { border: 0; padding: 0; max-width: none; }
+        .app-main { padding: 0 !important; }
+    }
+</style>
+
+@code {
+    [Parameter] public Guid StudentId { get; set; }
+
+    private ProgressDto? _progress;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _progress = await Api.GetStudentProgressAsync(StudentId);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.IsNotFound ? "We couldn't find a report for this student." : ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load this report. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("window.print");
+
+    private static int MasteryPct(double v) => (int)Math.Round(v * (v <= 1 ? 100 : 1));
+}

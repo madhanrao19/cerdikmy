@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "namePrefix": {
+      "value": "cerdik"
+    },
+    "containerImageApi": {
+      "value": "REPLACE_ME.azurecr.io/cerdik-api:latest"
+    },
+    "containerImageWeb": {
+      "value": "REPLACE_ME.azurecr.io/cerdik-web:latest"
+    },
+    "containerImageWorker": {
+      "value": "REPLACE_ME.azurecr.io/cerdik-worker:latest"
+    },
+    "sqlAdminLogin": {
+      "value": "cerdikadmin"
+    },
+    "sqlAdminPassword": {
+      "value": "CHANGE_ME_StrongP@ssw0rd!"
+    },
+    "jwtAccessSecret": {
+      "value": "CHANGE_ME-access-secret-min-32-chars-long-000000"
+    },
+    "jwtRefreshSecret": {
+      "value": "CHANGE_ME-refresh-secret-min-32-chars-long-00000"
+    },
+    "aiProvider": {
+      "value": "openai"
+    },
+    "aiOpenAiApiKey": {
+      "value": "sk-REPLACE_ME"
+    },
+    "paymentsProvider": {
+      "value": "billplz"
+    }
+  }
+}

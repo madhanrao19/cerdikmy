@@ -1,0 +1,116 @@
+@page "/parent"
+@inject ApiClient Api
+
+<PageTitle>Parent dashboard — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Parent })">
+        <div class="page-head">
+            <div>
+                <h1 class="page-title">Family dashboard</h1>
+                <p class="page-sub">@(_data?.HouseholdName ?? "Your household") at a glance</p>
+            </div>
+            <a class="btn-secondary" href="/parent/plan">Manage study plans</a>
+        </div>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading dashboard…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else if (_data is not null)
+        {
+            <section class="stat-row" aria-label="Household summary">
+                <div class="stat-tile">
+                    <span class="stat-label">Children</span>
+                    <span class="stat-value">@_data.Children.Count</span>
+                </div>
+                <div class="stat-tile">
+                    <span class="stat-label">Subscription</span>
+                    <span class="stat-value-sm">@(_data.Subscription?.PlanName ?? "No active plan")</span>
+                </div>
+                <div class="stat-tile @(_data.OpenAiFlags > 0 ? "alert" : "")">
+                    <span class="stat-label">Open safety flags</span>
+                    <span class="stat-value">@_data.OpenAiFlags</span>
+                    @if (_data.OpenAiFlags > 0)
+                    {
+                        <a class="stat-link" href="/parent/flags">Review</a>
+                    }
+                </div>
+            </section>
+
+            @if (_data.Children.Count == 0)
+            {
+                <div class="card mt-6" role="note">
+                    <p>No children have been added to your household yet.</p>
+                </div>
+            }
+            else
+            {
+                <div class="children-grid mt-6">
+                    @foreach (var child in _data.Children)
+                    {
+                        <ParentSummaryPanel Child="child">
+                            <Actions Context="c">
+                                <a class="btn-secondary" href="@($"/parent/report/{c.StudentId}")">View report</a>
+                            </Actions>
+                        </ParentSummaryPanel>
+                    }
+                </div>
+            }
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .stat-row { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    .stat-tile { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: .25rem; }
+    .stat-tile.alert { border-color: #fca5a5; background: #fff5f5; }
+    .stat-label { font-size: .78rem; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+    .stat-value { font-size: 1.9rem; font-weight: 800; color: #0f172a; }
+    .stat-value-sm { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+    .stat-link { font-size: .8rem; color: var(--brand-600); font-weight: 600; }
+    .children-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @@media (min-width: 640px) { .stat-row { grid-template-columns: repeat(3, 1fr); } }
+    @@media (min-width: 768px) { .children-grid { grid-template-columns: repeat(2, 1fr); } }
+    @@media (min-width: 1280px) { .children-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+@code {
+    private ParentDashboardDto? _data;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _data = await Api.GetParentDashboardAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load your dashboard. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

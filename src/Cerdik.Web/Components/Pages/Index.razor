@@ -1,0 +1,42 @@
+@page "/"
+@implements IDisposable
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>cerdikMY</PageTitle>
+
+<div class="p-8 text-center text-slate-500" role="status" aria-live="polite">
+    @_status
+</div>
+
+@code {
+    private string _status = "Loading…";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.OnChange += StateHasChanged;
+
+        if (!Auth.IsAuthenticated)
+        {
+            await Auth.TryRestoreSessionAsync();
+        }
+
+        Redirect();
+    }
+
+    private void Redirect()
+    {
+        var target = Auth.Role switch
+        {
+            UserRole.Parent => "/parent",
+            UserRole.Student => "/student",
+            UserRole.Admin or UserRole.ContentAdmin => "/admin",
+            UserRole.SafetyReviewer => "/admin/moderation",
+            _ => "/login",
+        };
+        _status = "Redirecting…";
+        Nav.NavigateTo(target, forceLoad: false);
+    }
+
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
+}

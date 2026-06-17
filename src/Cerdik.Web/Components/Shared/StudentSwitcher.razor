@@ -1,0 +1,48 @@
+@implements IDisposable
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+
+@if (Auth.Students.Count > 0)
+{
+    <div class="student-switcher">
+        <label class="sr-only" for="student-switcher-select">Select student</label>
+        <span class="switcher-icon" aria-hidden="true">👤</span>
+        <select id="student-switcher-select" class="switcher-select"
+                value="@Current.StudentId" @onchange="OnChanged">
+            @foreach (var s in Auth.Students)
+            {
+                <option value="@s.Id">@s.DisplayName</option>
+            }
+        </select>
+    </div>
+}
+
+<style>
+    .student-switcher { display: inline-flex; align-items: center; gap: .4rem; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 9999px; padding: .15rem .5rem .15rem .75rem; }
+    .switcher-icon { font-size: .9rem; }
+    .switcher-select { border: 0; background: transparent; font-size: .85rem; font-weight: 600; color: #334155; padding: .25rem 1.25rem .25rem .25rem; cursor: pointer; }
+    .switcher-select:focus-visible { outline: 2px solid var(--brand-500); border-radius: .25rem; }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Current.OnChange += StateHasChanged;
+        Auth.OnChange += StateHasChanged;
+        Current.EnsureDefault(Auth.Students);
+    }
+
+    private void OnChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+        {
+            Current.SelectById(id, Auth.Students);
+        }
+    }
+
+    public void Dispose()
+    {
+        Current.OnChange -= StateHasChanged;
+        Auth.OnChange -= StateHasChanged;
+    }
+}

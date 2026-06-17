@@ -1,0 +1,49 @@
+# ---- .NET ----
+bin/
+obj/
+out/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+*.user
+*.suo
+*.userprefs
+project.lock.json
+artifacts/
+
+# ---- Rider / VS ----
+.idea/
+.vs/
+*.sln.iml
+
+# ---- Test / coverage ----
+[Tt]est[Rr]esult*/
+coverage/
+*.coverage
+*.trx
+playwright-report/
+test-results/
+.playwright/
+
+# ---- Env / secrets ----
+.env
+.env.local
+.env.*.local
+!.env.example
+appsettings.*.local.json
+*.pem
+*.pfx
+
+# ---- Docker local data ----
+infra/docker/.data/
+infra/docker/mssql-data/
+infra/docker/minio-data/
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Node (Blazor tooling / tailwind build only) ----
+node_modules/
+src/Cerdik.Web/wwwroot/css/app.generated.css

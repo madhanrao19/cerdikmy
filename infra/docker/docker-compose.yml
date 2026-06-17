@@ -1,0 +1,256 @@
+# =============================================================================
+# cerdikMY — Docker Compose (full local / on-prem stack)
+#
+# Usage (from the repository ROOT so build contexts and --env-file resolve):
+#   docker compose -f infra/docker/docker-compose.yml --env-file .env up -d --build
+#
+# Host port map:  web 5080 | api 5081 | mssql 1433 | minio 9000/9001 | mailpit 8025
+# All in-container app ports are 8080. Variables come from the repo-root .env
+# (mirror of .env.example). Defaults below keep the stack bootable out of the box.
+# =============================================================================
+
+name: cerdikmy
+
+services:
+  # ---------------------------------------------------------------------------
+  # SQL Server 2025 — primary datastore + Hangfire job storage.
+  # ---------------------------------------------------------------------------
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: cerdik-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-Cerdik!Passw0rd}"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+    networks:
+      - cerdik
+    healthcheck:
+      # sqlcmd lives at /opt/mssql-tools18/bin in the 2022/2025 images; -C trusts
+      # the self-signed dev cert. Succeeds only once the engine accepts logins.
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -No -Q \"SELECT 1\" || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # MinIO — S3-compatible object storage for dev media.
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: cerdik-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "${S3_ACCESS_KEY:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${S3_SECRET_KEY:-minioadmin}"
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    volumes:
+      - minio-data:/data
+    networks:
+      - cerdik
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # minio-setup — one-shot: wait for MinIO, then create the media bucket.
+  # ---------------------------------------------------------------------------
+  minio-setup:
+    image: minio/mc:latest
+    container_name: cerdik-minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY:-minioadmin}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY:-minioadmin}"
+      S3_BUCKET: "${S3_BUCKET:-cerdik-media}"
+    entrypoint: >
+      /bin/sh -c "
+      set -e;
+      mc alias set local http://minio:9000 \"$$S3_ACCESS_KEY\" \"$$S3_SECRET_KEY\";
+      mc mb --ignore-existing local/\"$$S3_BUCKET\";
+      mc anonymous set download local/\"$$S3_BUCKET\";
+      echo 'MinIO bucket ready: '\"$$S3_BUCKET\";
+      "
+    networks:
+      - cerdik
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # mailpit — dev SMTP sink + web UI for outbound mail.
+  # ---------------------------------------------------------------------------
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: cerdik-mailpit
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # Web UI
+    networks:
+      - cerdik
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # api — ASP.NET Core 10 Web API (host 5081 -> container 8080).
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/api.Dockerfile
+    image: cerdikmy/api:latest
+    container_name: cerdik-api
+    depends_on:
+      mssql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:8080"
+      # --- Database (intra-network host = service name "mssql") ---
+      DATABASE_URL: "${DATABASE_URL:-Server=mssql,1433;Database=cerdikmy;User Id=sa;Password=Cerdik!Passw0rd;TrustServerCertificate=True;Encrypt=False}"
+      # --- Auth / JWT ---
+      # Dev defaults keep the stack bootable with one command; OVERRIDE in .env for any real deploy.
+      JWT_ACCESS_SECRET: "${JWT_ACCESS_SECRET:-dev-access-secret-change-me-min-32-chars-long-000}"
+      JWT_REFRESH_SECRET: "${JWT_REFRESH_SECRET:-dev-refresh-secret-change-me-min-32-chars-long-00}"
+      JWT_ISSUER: "${JWT_ISSUER:-cerdikmy}"
+      JWT_AUDIENCE: "${JWT_AUDIENCE:-cerdikmy-clients}"
+      JWT_ACCESS_TTL_MINUTES: "${JWT_ACCESS_TTL_MINUTES:-15}"
+      JWT_REFRESH_TTL_DAYS: "${JWT_REFRESH_TTL_DAYS:-30}"
+      # --- Object storage (MinIO over the compose network) ---
+      STORAGE_PROVIDER: "${STORAGE_PROVIDER:-s3}"
+      S3_ENDPOINT: "${S3_ENDPOINT:-http://minio:9000}"
+      S3_REGION: "${S3_REGION:-ap-southeast-1}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY:-minioadmin}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY:-minioadmin}"
+      S3_BUCKET: "${S3_BUCKET:-cerdik-media}"
+      # --- AI provider ---
+      AI_PROVIDER: "${AI_PROVIDER:-mock}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      OPENAI_CHAT_MODEL: "${OPENAI_CHAT_MODEL:-gpt-4o-mini}"
+      OPENAI_EMBED_MODEL: "${OPENAI_EMBED_MODEL:-text-embedding-3-small}"
+      AZURE_OPENAI_ENDPOINT: "${AZURE_OPENAI_ENDPOINT:-}"
+      AZURE_OPENAI_API_KEY: "${AZURE_OPENAI_API_KEY:-}"
+      AZURE_OPENAI_DEPLOYMENT: "${AZURE_OPENAI_DEPLOYMENT:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      ANTHROPIC_CHAT_MODEL: "${ANTHROPIC_CHAT_MODEL:-claude-sonnet-4-6}"
+      # --- Payments ---
+      PAYMENT_PROVIDER: "${PAYMENT_PROVIDER:-billplz}"
+      BILLPLZ_API_KEY: "${BILLPLZ_API_KEY:-}"
+      BILLPLZ_COLLECTION_ID: "${BILLPLZ_COLLECTION_ID:-}"
+      CURLEC_KEY_ID: "${CURLEC_KEY_ID:-}"
+      CURLEC_KEY_SECRET: "${CURLEC_KEY_SECRET:-}"
+      STRIPE_SECRET_KEY: "${STRIPE_SECRET_KEY:-}"
+      STRIPE_WEBHOOK_SECRET: "${STRIPE_WEBHOOK_SECRET:-}"
+      # --- Mail (mailpit over the compose network) ---
+      MAIL_FROM: "${MAIL_FROM:-cerdikMY <no-reply@cerdik.my>}"
+      SMTP_URL: "${SMTP_URL:-smtp://mailpit:1025}"
+      # --- Observability ---
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_SERVICE_NAME: "${OTEL_SERVICE_NAME:-cerdikmy-api}"
+      # --- Feature flags ---
+      FEATURE_FLAGS: "${FEATURE_FLAGS:-}"
+    ports:
+      - "5081:8080"
+    networks:
+      - cerdik
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # web — Blazor Web App (host 5080 -> container 8080).
+  # ---------------------------------------------------------------------------
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/web.Dockerfile
+    image: cerdikmy/web:latest
+    container_name: cerdik-web
+    depends_on:
+      api:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://+:8080"
+      # The web app talks to the API over the compose network.
+      API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
+      NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-http://localhost:5080}"
+      SESSION_COOKIE_DOMAIN: "${SESSION_COOKIE_DOMAIN:-localhost}"
+      JWT_ISSUER: "${JWT_ISSUER:-cerdikmy}"
+      JWT_AUDIENCE: "${JWT_AUDIENCE:-cerdikmy-clients}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_SERVICE_NAME: "cerdikmy-web"
+    ports:
+      - "5080:8080"
+    networks:
+      - cerdik
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # worker — Hangfire job host (no public port).
+  # ---------------------------------------------------------------------------
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/docker/worker.Dockerfile
+    image: cerdikmy/worker:latest
+    container_name: cerdik-worker
+    depends_on:
+      mssql:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      DOTNET_ENVIRONMENT: "Production"
+      DATABASE_URL: "${DATABASE_URL:-Server=mssql,1433;Database=cerdikmy;User Id=sa;Password=Cerdik!Passw0rd;TrustServerCertificate=True;Encrypt=False}"
+      STORAGE_PROVIDER: "${STORAGE_PROVIDER:-s3}"
+      S3_ENDPOINT: "${S3_ENDPOINT:-http://minio:9000}"
+      S3_REGION: "${S3_REGION:-ap-southeast-1}"
+      S3_ACCESS_KEY: "${S3_ACCESS_KEY:-minioadmin}"
+      S3_SECRET_KEY: "${S3_SECRET_KEY:-minioadmin}"
+      S3_BUCKET: "${S3_BUCKET:-cerdik-media}"
+      AI_PROVIDER: "${AI_PROVIDER:-mock}"
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+      MAIL_FROM: "${MAIL_FROM:-cerdikMY <no-reply@cerdik.my>}"
+      SMTP_URL: "${SMTP_URL:-smtp://mailpit:1025}"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"
+      OTEL_SERVICE_NAME: "cerdikmy-worker"
+      FEATURE_FLAGS: "${FEATURE_FLAGS:-}"
+    networks:
+      - cerdik
+    restart: unless-stopped
+
+# -----------------------------------------------------------------------------
+# Named volumes — persist datastore + object storage across recreates.
+# -----------------------------------------------------------------------------
+volumes:
+  mssql-data:
+    name: cerdik-mssql-data
+  minio-data:
+    name: cerdik-minio-data
+
+# -----------------------------------------------------------------------------
+# Shared bridge network.
+# -----------------------------------------------------------------------------
+networks:
+  cerdik:
+    name: cerdik
+    driver: bridge

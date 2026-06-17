@@ -1,0 +1,102 @@
+@page "/student/tutor"
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+
+<PageTitle>AI Tutor — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
+        <div class="page-head">
+            <div>
+                <h1 class="page-title">AI Tutor</h1>
+                <p class="page-sub">A friendly tutor aligned to your KPM curriculum.</p>
+            </div>
+            @if (_session is not null)
+            {
+                <button class="btn-secondary no-print" @onclick="StartNewSessionAsync" disabled="@_starting">
+                    New conversation
+                </button>
+            }
+        </div>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Starting your tutor session…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="StartNewSessionAsync">Retry</button>
+            </div>
+        }
+        else if (_session is not null)
+        {
+            <div class="tutor-wrap">
+                <TutorChatPanel SessionId="_session.Id"
+                                InitialMessages="_session.Messages"
+                                OnReplyReceived="OnReply" />
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .tutor-wrap { height: calc(100vh - 16rem); min-height: 28rem; }
+</style>
+
+@code {
+    private TutorSessionDto? _session;
+    private bool _loading = true;
+    private bool _starting;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Current.EnsureDefault(Auth.Students);
+        await StartNewSessionAsync();
+    }
+
+    private async Task StartNewSessionAsync()
+    {
+        _starting = true;
+        _loading = _session is null;
+        _error = null;
+        try
+        {
+            var studentId = Current.StudentId
+                ?? Auth.User?.StudentId
+                ?? Auth.Students.FirstOrDefault()?.Id;
+            if (studentId is null)
+            {
+                _error = "No student profile is linked to your account.";
+                return;
+            }
+
+            _session = await Api.CreateTutorSessionAsync(
+                new CreateTutorSessionRequest(studentId.Value, null, null, "Tutoring session"));
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't start a tutor session. Please try again.";
+        }
+        finally
+        {
+            _starting = false;
+            _loading = false;
+        }
+    }
+
+    private void OnReply(TutorReplyDto reply)
+    {
+        // Hook for future analytics / mastery tracking. The panel manages its own UI.
+    }
+}

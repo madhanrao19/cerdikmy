@@ -1,0 +1,28 @@
+@* Coloured Tahap Penguasaan (mastery band) badge, TP1–TP6. *@
+<span class="mastery-badge @ColorClass" title="@FilterLabels.Mastery(Band)" aria-label="@AriaLabel">
+    <span aria-hidden="true">@Band</span>
+    @if (ShowLabel)
+    {
+        <span class="mastery-text">@LabelText</span>
+    }
+</span>
+
+<style>
+    .mastery-badge { display: inline-flex; align-items: center; gap: .35rem; font-size: .75rem; font-weight: 700; padding: .2rem .55rem; border-radius: 9999px; border: 1px solid transparent; white-space: nowrap; }
+    .mastery-text { font-weight: 500; }
+    .tp-1 { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+    .tp-2 { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+    .tp-3 { background: #fef9c3; color: #854d0e; border-color: #fde68a; }
+    .tp-4 { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+    .tp-5 { background: #cffafe; color: #155e75; border-color: #67e8f9; }
+    .tp-6 { background: #dbeafe; color: #1e3a8a; border-color: #93c5fd; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public MasteryBand Band { get; set; }
+    [Parameter] public bool ShowLabel { get; set; } = true;
+
+    private string ColorClass => $"tp-{(int)Band}";
+    private string LabelText => FilterLabels.Mastery(Band).Split('—').Last().Trim();
+    private string AriaLabel => $"Mastery band {(int)Band}, {LabelText}";
+}

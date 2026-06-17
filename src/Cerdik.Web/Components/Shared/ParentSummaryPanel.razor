@@ -1,0 +1,101 @@
+@* Compact overview card for one child, shown on the parent dashboard. *@
+<article class="child-card">
+    <header class="child-head">
+        <div class="child-avatar" aria-hidden="true">
+            @if (!string.IsNullOrWhiteSpace(Child.Avatar))
+            {
+                <img src="@Child.Avatar" alt="" />
+            }
+            else
+            {
+                <span>@Initials</span>
+            }
+        </div>
+        <div class="child-id">
+            <h3 class="child-name">@Child.DisplayName</h3>
+            <p class="child-level">@FilterLabels.Level(Child.Level)</p>
+        </div>
+        <MasteryBadge Band="Child.OverallBand" />
+    </header>
+
+    <dl class="child-stats">
+        <div>
+            <dt>Overall mastery</dt>
+            <dd>
+                <div class="mastery-bar" role="meter" aria-valuemin="0" aria-valuemax="100"
+                     aria-valuenow="@MasteryPct" aria-label="Overall mastery">
+                    <span style="width:@MasteryPct%"></span>
+                </div>
+                <span class="mastery-num">@MasteryPct%</span>
+            </dd>
+        </div>
+        <div>
+            <dt>Lessons this week</dt>
+            <dd class="stat-num">@Child.LessonsCompletedThisWeek</dd>
+        </div>
+        <div>
+            <dt>Minutes this week</dt>
+            <dd class="stat-num">@Child.MinutesThisWeek</dd>
+        </div>
+    </dl>
+
+    @if (Child.Subjects.Count > 0)
+    {
+        <ul class="child-subjects">
+            @foreach (var s in Child.Subjects.Take(4))
+            {
+                <li>
+                    <span class="subject-name">@s.SubjectName</span>
+                    <MasteryBadge Band="s.Band" ShowLabel="false" />
+                </li>
+            }
+        </ul>
+    }
+
+    @if (Actions is not null)
+    {
+        <div class="child-actions">@Actions(Child)</div>
+    }
+</article>
+
+<style>
+    .child-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1.1rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); display: flex; flex-direction: column; gap: 1rem; }
+    .child-head { display: flex; align-items: center; gap: .75rem; }
+    .child-avatar { width: 2.75rem; height: 2.75rem; border-radius: 9999px; background: var(--brand-100); color: var(--brand-700); display: flex; align-items: center; justify-content: center; font-weight: 700; overflow: hidden; }
+    .child-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .child-id { flex: 1 1 auto; min-width: 0; }
+    .child-name { font-weight: 700; color: #0f172a; }
+    .child-level { font-size: .8rem; color: #64748b; }
+    .child-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin: 0; }
+    .child-stats dt { font-size: .72rem; color: #64748b; }
+    .child-stats dd { margin: .25rem 0 0; }
+    .stat-num { font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+    .mastery-bar { background: #e2e8f0; border-radius: 9999px; height: .5rem; overflow: hidden; }
+    .mastery-bar span { display: block; height: 100%; background: var(--brand-500); border-radius: 9999px; }
+    .mastery-num { font-size: .75rem; color: #334155; font-weight: 600; }
+    .child-subjects { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+    .child-subjects li { display: flex; align-items: center; justify-content: space-between; font-size: .85rem; }
+    .subject-name { color: #334155; }
+    .child-actions { display: flex; gap: .5rem; flex-wrap: wrap; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public ChildOverviewDto Child { get; set; } = default!;
+
+    /// <summary>Optional action buttons rendered in the card footer.</summary>
+    [Parameter] public RenderFragment<ChildOverviewDto>? Actions { get; set; }
+
+    private int MasteryPct => (int)Math.Round(Child.OverallMastery * (Child.OverallMastery <= 1 ? 100 : 1));
+
+    private string Initials
+    {
+        get
+        {
+            var parts = Child.DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return "?";
+            return parts.Length == 1
+                ? parts[0][..1].ToUpperInvariant()
+                : (parts[0][..1] + parts[^1][..1]).ToUpperInvariant();
+        }
+    }
+}

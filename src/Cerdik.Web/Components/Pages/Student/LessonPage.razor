@@ -1,0 +1,166 @@
+@page "/student/lesson/{LessonId:guid}"
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+
+<PageTitle>@(_lesson?.Title ?? "Lesson") — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading lesson…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <a class="btn-secondary mt-4" href="/student">Back to home</a>
+            </div>
+        }
+        else if (_lesson is not null)
+        {
+            <a class="back-link no-print" href="/student">← Back to home</a>
+
+            <div class="lesson-layout">
+                <div class="lesson-main">
+                    <LessonRenderer Lesson="_lesson" />
+                </div>
+
+                @if (_lesson.Activities.Count > 0)
+                {
+                    <section class="lesson-activities" aria-labelledby="activities-h">
+                        <h2 id="activities-h" class="activities-title">Practice &amp; check your understanding</h2>
+
+                        <div class="activity-tabs no-print" role="tablist" aria-label="Activities">
+                            @foreach (var (act, i) in _lesson.Activities.Select((a, i) => (a, i)))
+                            {
+                                <button type="button" role="tab"
+                                        id="@($"tab-{i}")" aria-controls="@($"panel-{i}")"
+                                        aria-selected="@(_selectedActivity == i)"
+                                        class="activity-tab @(_selectedActivity == i ? "active" : "")"
+                                        @onclick="() => SelectActivity(i)">
+                                    @act.Title
+                                    <span class="tab-type">@act.Type</span>
+                                </button>
+                            }
+                        </div>
+
+                        <div id="@($"panel-{_selectedActivity}")" role="tabpanel"
+                             aria-labelledby="@($"tab-{_selectedActivity}")">
+                            @if (_activityLoading)
+                            {
+                                <p class="text-slate-500" role="status">Loading activity…</p>
+                            }
+                            else if (_activityError is not null)
+                            {
+                                <div class="card" role="alert">
+                                    <p class="text-rose-700">@_activityError</p>
+                                    <button class="btn-secondary mt-4" @onclick="() => SelectActivity(_selectedActivity)">Retry</button>
+                                </div>
+                            }
+                            else if (_activity is not null)
+                            {
+                                <QuizCard Title="@_activity.Title"
+                                          Questions="_activity.Questions"
+                                          OnSubmit="SubmitAttemptAsync"
+                                          OnRetry="() => SelectActivity(_selectedActivity)" />
+                            }
+                        </div>
+                    </section>
+                }
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .back-link { display: inline-block; color: var(--brand-600); font-weight: 600; font-size: .85rem; margin-bottom: 1rem; }
+    .lesson-layout { display: flex; flex-direction: column; gap: 2rem; }
+    .activities-title { font-size: 1.3rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .activity-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+    .activity-tab { display: flex; flex-direction: column; align-items: flex-start; border: 1px solid #cbd5e1; background: #fff; border-radius: .6rem; padding: .5rem .85rem; font-weight: 600; color: #334155; cursor: pointer; }
+    .activity-tab.active { border-color: var(--brand-500); background: var(--brand-50); color: var(--brand-700); }
+    .activity-tab:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+    .tab-type { font-size: .68rem; font-weight: 500; color: #64748b; text-transform: uppercase; }
+</style>
+
+@code {
+    [Parameter] public Guid LessonId { get; set; }
+
+    private LessonDto? _lesson;
+    private ActivityDto? _activity;
+    private AttemptDto? _attempt;
+    private int _selectedActivity;
+    private bool _loading = true;
+    private bool _activityLoading;
+    private string? _error;
+    private string? _activityError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _error = null;
+        _activity = null;
+        try
+        {
+            _lesson = await Api.GetLessonAsync(LessonId);
+            if (_lesson.Activities.Count > 0)
+            {
+                await SelectActivity(0);
+            }
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.IsNotFound ? "We couldn't find this lesson." : ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load this lesson. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task SelectActivity(int index)
+    {
+        if (_lesson is null || index < 0 || index >= _lesson.Activities.Count) return;
+        _selectedActivity = index;
+        _activityLoading = true;
+        _activityError = null;
+        _activity = null;
+        _attempt = null;
+        StateHasChanged();
+        try
+        {
+            _activity = await Api.GetActivityAsync(_lesson.Activities[index].Id);
+        }
+        catch (ApiException ex)
+        {
+            _activityError = ex.Message;
+        }
+        catch (Exception)
+        {
+            _activityError = "We couldn't load this activity. Please try again.";
+        }
+        finally
+        {
+            _activityLoading = false;
+        }
+    }
+
+    private async Task<AttemptResultDto> SubmitAttemptAsync(IReadOnlyDictionary<string, string> answers)
+    {
+        if (_activity is null) throw new InvalidOperationException("No activity is loaded.");
+        var studentId = Current.StudentId
+            ?? Auth.User?.StudentId
+            ?? Auth.Students.FirstOrDefault()?.Id
+            ?? throw new InvalidOperationException("No student is selected.");
+
+        // Start a fresh attempt, then submit the collected answers.
+        _attempt = await Api.StartActivityAsync(_activity.Id, studentId);
+        return await Api.SubmitAttemptAsync(_attempt.Id, answers);
+    }
+}

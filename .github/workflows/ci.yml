@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  build-test:
+    name: Build, lint & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore CerdikMY.sln
+
+      - name: Format check (lint)
+        run: dotnet format CerdikMY.sln --verify-no-changes --severity warn
+        continue-on-error: true
+
+      - name: Build
+        run: dotnet build CerdikMY.sln --no-restore -c Release
+
+      - name: Unit tests
+        run: dotnet test tests/Cerdik.UnitTests/Cerdik.UnitTests.csproj --no-build -c Release --logger "trx;LogFileName=unit.trx"
+
+      - name: Integration tests
+        run: dotnet test tests/Cerdik.IntegrationTests/Cerdik.IntegrationTests.csproj --no-build -c Release --logger "trx;LogFileName=integration.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: "**/*.trx"
+          if-no-files-found: ignore
+
+  web-assets:
+    name: Build web (Tailwind)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build Tailwind CSS
+        working-directory: src/Cerdik.Web
+        run: |
+          if [ -f package.json ]; then
+            npm install
+            npm run build:css --if-present
+          fi
+
+  docker:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    needs: build-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build API image
+        run: docker build -f infra/docker/api.Dockerfile -t cerdik-api:ci .
+      - name: Build Web image
+        run: docker build -f infra/docker/web.Dockerfile -t cerdik-web:ci .
+      - name: Build Worker image
+        run: docker build -f infra/docker/worker.Dockerfile -t cerdik-worker:ci .

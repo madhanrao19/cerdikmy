@@ -1,0 +1,149 @@
+@page "/admin"
+@inject ApiClient Api
+
+<PageTitle>Analytics — cerdikMY Admin</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Admin, UserRole.ContentAdmin })">
+        <h1 class="page-title">Cohort analytics</h1>
+        <p class="page-sub mb-6">Platform health and learner engagement across the last 7 days.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading analytics…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else if (_data is not null)
+        {
+            <section class="kpi-row" aria-label="Key metrics">
+                <div class="kpi"><span class="kpi-label">Total students</span><span class="kpi-value">@_data.TotalStudents</span></div>
+                <div class="kpi"><span class="kpi-label">Active (7d)</span><span class="kpi-value">@_data.ActiveStudents7d</span></div>
+                <div class="kpi"><span class="kpi-label">Lessons (7d)</span><span class="kpi-value">@_data.LessonsCompleted7d</span></div>
+                <div class="kpi"><span class="kpi-label">Tutor sessions (7d)</span><span class="kpi-value">@_data.TutorSessions7d</span></div>
+                <div class="kpi @(_data.OpenModerationFlags > 0 ? "alert" : "")">
+                    <span class="kpi-label">Open flags</span><span class="kpi-value">@_data.OpenModerationFlags</span>
+                </div>
+            </section>
+
+            <div class="charts-grid mt-8">
+                <section class="card" aria-labelledby="bylevel-h">
+                    <h2 id="bylevel-h" class="card-title">Students by level</h2>
+                    @RenderBarChart(_data.ByLevel, r => r.Students, r => r.Key)
+                </section>
+                <section class="card" aria-labelledby="byschool-h">
+                    <h2 id="byschool-h" class="card-title">Students by school type</h2>
+                    @RenderBarChart(_data.BySchoolType, r => r.Students, r => r.Key)
+                </section>
+                <section class="card" aria-labelledby="masterylevel-h">
+                    <h2 id="masterylevel-h" class="card-title">Avg mastery by level</h2>
+                    @RenderBarChart(_data.ByLevel, r => (int)Math.Round(MasteryPct(r.AvgMastery)), r => r.Key, suffix: "%")
+                </section>
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .kpi-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .kpi { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1rem; }
+    .kpi.alert { border-color: #fca5a5; background: #fff5f5; }
+    .kpi-label { display: block; font-size: .75rem; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+    .kpi-value { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+    .charts-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .bar-chart { display: flex; flex-direction: column; gap: .6rem; }
+    .bar-row { display: grid; grid-template-columns: 7rem 1fr 3rem; align-items: center; gap: .6rem; }
+    .bar-key { font-size: .82rem; color: #334155; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-track { background: #e2e8f0; border-radius: 9999px; height: .9rem; overflow: hidden; }
+    .bar-fill { display: block; height: 100%; background: var(--brand-500); border-radius: 9999px; min-width: 2px; }
+    .bar-val { font-size: .8rem; color: #475569; text-align: right; font-weight: 600; }
+    @@media (min-width: 768px) { .kpi-row { grid-template-columns: repeat(5, 1fr); } }
+    @@media (min-width: 1024px) { .charts-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+@code {
+    private CohortAnalyticsDto? _data;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _data = await Api.GetCohortAnalyticsAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load analytics. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private RenderFragment RenderBarChart(
+        IReadOnlyList<CohortRow> rows, Func<CohortRow, int> value, Func<CohortRow, string> key, string suffix = "") => builder =>
+    {
+        var max = rows.Count == 0 ? 1 : Math.Max(1, rows.Max(value));
+        var seq = 0;
+        if (rows.Count == 0)
+        {
+            builder.OpenElement(seq++, "p");
+            builder.AddAttribute(seq++, "class", "text-slate-500");
+            builder.AddContent(seq++, "No data available.");
+            builder.CloseElement();
+            return;
+        }
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "bar-chart");
+        builder.AddAttribute(seq++, "role", "img");
+        builder.AddAttribute(seq++, "aria-label", string.Join(", ", rows.Select(r => $"{key(r)}: {value(r)}{suffix}")));
+        foreach (var row in rows)
+        {
+            var v = value(row);
+            var pct = (int)Math.Round(100.0 * v / max);
+            builder.OpenElement(seq++, "div");
+            builder.AddAttribute(seq++, "class", "bar-row");
+
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "bar-key");
+            builder.AddContent(seq++, key(row));
+            builder.CloseElement();
+
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "bar-track");
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "bar-fill");
+            builder.AddAttribute(seq++, "style", $"width:{pct}%");
+            builder.CloseElement();
+            builder.CloseElement();
+
+            builder.OpenElement(seq++, "span");
+            builder.AddAttribute(seq++, "class", "bar-val");
+            builder.AddContent(seq++, $"{v}{suffix}");
+            builder.CloseElement();
+
+            builder.CloseElement(); // bar-row
+        }
+        builder.CloseElement(); // bar-chart
+    };
+
+    private static double MasteryPct(double v) => v * (v <= 1 ? 100 : 1);
+}

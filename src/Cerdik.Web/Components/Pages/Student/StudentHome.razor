@@ -1,0 +1,224 @@
+@page "/student"
+@implements IDisposable
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+
+<PageTitle>Today — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
+        <div class="page-head">
+            <div>
+                <h1 class="page-title">@Greeting</h1>
+                <p class="page-sub">Here's your learning for today.</p>
+            </div>
+            <div class="lang-toggle no-print" role="group" aria-label="Content language">
+                @foreach (var lang in new[] { Language.BM, Language.EN })
+                {
+                    <button type="button" class="lang-btn @(_language == lang ? "active" : "")"
+                            aria-pressed="@(_language == lang)" @onclick="() => SetLanguage(lang)">
+                        @FilterLabels.Language(lang)
+                    </button>
+                }
+            </div>
+        </div>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading your day…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else
+        {
+            <section class="quick-stats" aria-label="Your progress">
+                <div class="qstat">
+                    <span class="qstat-label">Points</span>
+                    <span class="qstat-value">@(_student?.Points ?? 0)</span>
+                </div>
+                <div class="qstat">
+                    <span class="qstat-label">Overall mastery</span>
+                    <span class="qstat-value">@(_progress is null ? "—" : $"{MasteryPct(_progress.OverallMastery)}%")</span>
+                </div>
+                <div class="qstat">
+                    <span class="qstat-label">Lessons done</span>
+                    <span class="qstat-value">@(_progress?.LessonsCompleted ?? 0)</span>
+                </div>
+                <div class="qstat">
+                    <span class="qstat-label">Badges</span>
+                    <span class="qstat-value">@(_progress?.Badges.Count ?? 0)</span>
+                </div>
+            </section>
+
+            <div class="home-grid">
+                <section class="card" aria-labelledby="subjects-h">
+                    <h2 id="subjects-h" class="card-title">Your subjects</h2>
+                    @if (_subjects.Count == 0)
+                    {
+                        <p class="text-slate-500">No subjects are available yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="subject-list">
+                            @foreach (var s in _subjects)
+                            {
+                                var prog = _progress?.Subjects.FirstOrDefault(p => p.SubjectId == s.Id);
+                                <li class="subject-item">
+                                    <div>
+                                        <p class="subject-name">@s.Name</p>
+                                        @if (prog is not null)
+                                        {
+                                            <p class="subject-sub">@prog.LessonsCompleted / @prog.TotalLessons lessons</p>
+                                        }
+                                    </div>
+                                    @if (prog is not null)
+                                    {
+                                        <MasteryBadge Band="prog.Band" ShowLabel="false" />
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    <a class="btn-secondary mt-4" href="/student/progress">View detailed progress</a>
+                </section>
+
+                <aside class="home-side">
+                    <section class="card cta-card">
+                        <h2 class="card-title">Keep learning</h2>
+                        <p class="text-slate-600 mb-4">Practise with your AI tutor or jump back into a lesson.</p>
+                        <a class="btn-primary w-full" href="/student/tutor">💬 Ask the AI tutor</a>
+                        <a class="btn-secondary w-full mt-2" href="/student/progress">📈 See my progress</a>
+                    </section>
+
+                    @if (_progress is { Badges.Count: > 0 })
+                    {
+                        <section class="card" aria-labelledby="badges-h">
+                            <h2 id="badges-h" class="card-title">Recent badges</h2>
+                            <ul class="badge-list">
+                                @foreach (var b in _progress.Badges.Take(5))
+                                {
+                                    <li>
+                                        <span class="badge-icon" aria-hidden="true">@(b.Icon ?? "🏅")</span>
+                                        <span>@b.Name</span>
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+                    }
+                </aside>
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; }
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .lang-toggle { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 9999px; overflow: hidden; }
+    .lang-btn { border: 0; background: #fff; padding: .35rem .9rem; font-size: .8rem; font-weight: 600; color: #475569; cursor: pointer; }
+    .lang-btn.active { background: var(--brand-600); color: #fff; }
+    .lang-btn:focus-visible { outline: 2px solid var(--brand-500); outline-offset: -2px; }
+    .quick-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .qstat { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1rem; }
+    .qstat-label { display: block; font-size: .75rem; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+    .qstat-value { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+    .home-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .subject-list, .badge-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
+    .subject-item { display: flex; align-items: center; justify-content: space-between; padding: .6rem .75rem; border: 1px solid #f1f5f9; border-radius: .5rem; }
+    .subject-name { font-weight: 600; color: #1e293b; }
+    .subject-sub { font-size: .78rem; color: #64748b; }
+    .home-side { display: flex; flex-direction: column; gap: 1.5rem; }
+    .badge-list li { display: flex; align-items: center; gap: .5rem; font-size: .9rem; }
+    .w-full { width: 100%; }
+    @@media (min-width: 640px) { .quick-stats { grid-template-columns: repeat(4, 1fr); } }
+    @@media (min-width: 1024px) { .home-grid { grid-template-columns: 2fr 1fr; } }
+</style>
+
+@code {
+    private StudentSummaryDto? _student;
+    private ProgressDto? _progress;
+    private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
+    private Language _language = Language.BM;
+    private bool _loading = true;
+    private string? _error;
+
+    private string Greeting => $"Hi, {_student?.DisplayName ?? Auth.User?.FullName ?? "there"}!";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Current.OnChange += OnStudentChanged;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _student = ResolveStudent();
+            if (_student is not null) _language = _student.PrimaryLanguage;
+
+            var studentId = _student?.Id ?? Auth.User?.StudentId;
+            if (studentId is null)
+            {
+                _error = "No student profile is linked to your account.";
+                return;
+            }
+
+            _progress = await Api.GetStudentProgressAsync(studentId.Value);
+
+            var filter = _student is null
+                ? new CurriculumFilter()
+                : new CurriculumFilter(Level: _student.Level, SchoolType: _student.SchoolType,
+                    Language: _language, DlpMode: _student.DlpMode);
+            _subjects = await Api.GetSubjectsAsync(filter);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load your home page. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private StudentSummaryDto? ResolveStudent()
+    {
+        if (Current.Student is not null) return Current.Student;
+        Current.EnsureDefault(Auth.Students);
+        return Current.Student
+            ?? Auth.Students.FirstOrDefault(s => s.Id == Auth.User?.StudentId)
+            ?? Auth.Students.FirstOrDefault();
+    }
+
+    private async void OnStudentChanged()
+    {
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetLanguage(Language lang)
+    {
+        if (_language == lang) return;
+        _language = lang;
+        await LoadAsync();
+    }
+
+    private static int MasteryPct(double v) => (int)Math.Round(v * (v <= 1 ? 100 : 1));
+
+    public void Dispose() => Current.OnChange -= OnStudentChanged;
+}

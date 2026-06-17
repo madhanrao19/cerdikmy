@@ -1,0 +1,50 @@
+# =============================================================================
+# .dockerignore — keeps the build context small and the image reproducible.
+# This file is read relative to the build context, which (per docker-compose.yml)
+# is the repository ROOT. Keep paths repo-root-relative.
+# =============================================================================
+
+# --- VCS ---
+.git
+.gitignore
+.gitattributes
+
+# --- .NET build output ---
+**/bin
+**/obj
+**/out
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+artifacts/
+
+# --- Node / Tailwind (rebuilt inside the image) ---
+**/node_modules
+**/npm-debug.log
+**/.npm
+**/wwwroot/dist
+
+# --- IDE / editor ---
+.vs
+.vscode
+.idea
+*.swp
+*~
+
+# --- Local env & secrets (NEVER bake into an image) ---
+.env
+.env.*
+!.env.example
+**/appsettings.Development.json
+**/secrets.json
+
+# --- Test output / coverage ---
+TestResults/
+coverage/
+*.trx
+
+# --- Docs & infra (not needed by the app build) ---
+docs/
+infra/
+*.md

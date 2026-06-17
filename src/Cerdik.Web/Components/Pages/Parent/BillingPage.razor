@@ -1,0 +1,188 @@
+@page "/parent/billing"
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Billing — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Parent })">
+        <h1 class="page-title">Billing & subscription</h1>
+        <p class="page-sub mb-6">Manage your plan, view invoices and upgrade your household.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading billing…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else
+        {
+            @if (_subscription is not null)
+            {
+                <section class="card subscription" aria-label="Current subscription">
+                    <div class="sub-head">
+                        <div>
+                            <h2 class="sub-plan">@_subscription.PlanName</h2>
+                            <p class="sub-meta">
+                                @BillingPlanCard.FormatPrice(_subscription.AmountCents, _subscription.Currency)
+                                · renews @_subscription.CurrentPeriodEnd.LocalDateTime.ToString("d MMM yyyy")
+                            </p>
+                        </div>
+                        <span class="sub-status status-@_subscription.Status.ToString().ToLowerInvariant()">
+                            @_subscription.Status
+                        </span>
+                    </div>
+                </section>
+
+                <h2 class="section-title mt-8">Invoices</h2>
+                @if (_subscription.Invoices.Count == 0)
+                {
+                    <p class="text-slate-500">No invoices yet.</p>
+                }
+                else
+                {
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Number</th><th>Status</th><th>Amount</th>
+                                    <th>Issued</th><th>Paid</th><th><span class="sr-only">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inv in _subscription.Invoices)
+                                {
+                                    <tr>
+                                        <td>@inv.Number</td>
+                                        <td><span class="inv-status status-@inv.Status.ToString().ToLowerInvariant()">@inv.Status</span></td>
+                                        <td>@BillingPlanCard.FormatPrice(inv.AmountCents, inv.Currency)</td>
+                                        <td>@inv.IssuedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                        <td>@(inv.PaidAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(inv.HostedUrl))
+                                            {
+                                                <a class="text-brand-600" href="@inv.HostedUrl" target="_blank" rel="noopener">View</a>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="card" role="note">
+                    <p>You don't have an active subscription. Choose a plan below to get started.</p>
+                </div>
+            }
+
+            <h2 class="section-title mt-8">Available plans</h2>
+            @if (_checkoutError is not null)
+            {
+                <p class="text-rose-700 mb-3" role="alert">@_checkoutError</p>
+            }
+            <div class="plans-grid">
+                @foreach (var (plan, i) in _plans.Select((p, i) => (p, i)))
+                {
+                    <BillingPlanCard Plan="plan"
+                                     Highlighted="@(i == 1)"
+                                     IsCurrent="@(_subscription?.PlanCode == plan.Code)"
+                                     Disabled="@(_checkoutPlan == plan.Code)"
+                                     SelectLabel="@(_subscription is null ? "Subscribe" : "Switch plan")"
+                                     OnSelect="CheckoutAsync" />
+                }
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .section-title { font-size: 1.2rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .subscription { padding: 1.25rem; }
+    .sub-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .sub-plan { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+    .sub-meta { color: #64748b; margin-top: .25rem; }
+    .sub-status, .inv-status { font-size: .75rem; font-weight: 600; padding: .2rem .6rem; border-radius: 9999px; text-transform: capitalize; }
+    .status-active, .status-paid { background: #d1fae5; color: #065f46; }
+    .status-trialing, .status-open { background: #dbeafe; color: #1e40af; }
+    .status-pastdue, .status-uncollectible { background: #fef3c7; color: #92400e; }
+    .status-canceled, .status-expired, .status-void { background: #f1f5f9; color: #475569; }
+    .table-scroll { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: .75rem; background: #fff; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+    .data-table th { text-align: left; font-weight: 600; color: #475569; background: #f8fafc; padding: .6rem .85rem; border-bottom: 1px solid #e2e8f0; }
+    .data-table td { padding: .6rem .85rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .plans-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
+    @@media (min-width: 768px) { .plans-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+@code {
+    private SubscriptionDto? _subscription;
+    private IReadOnlyList<BillingPlanDto> _plans = Array.Empty<BillingPlanDto>();
+    private bool _loading = true;
+    private string? _error;
+    private string? _checkoutError;
+    private string? _checkoutPlan;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var dashboard = await Api.GetParentDashboardAsync();
+            _subscription = dashboard.Subscription;
+            _plans = await Api.GetBillingPlansAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load your billing details. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task CheckoutAsync(BillingPlanDto plan)
+    {
+        _checkoutError = null;
+        _checkoutPlan = plan.Code;
+        try
+        {
+            var householdId = Auth.User?.HouseholdId
+                ?? throw new InvalidOperationException("No household is associated with your account.");
+            var returnUrl = new Uri(new Uri(Nav.BaseUri), "/parent/billing").ToString();
+            var session = await Api.CreateCheckoutSessionAsync(
+                new CheckoutSessionRequest(householdId, plan.Code, returnUrl));
+            Nav.NavigateTo(session.CheckoutUrl, forceLoad: true);
+        }
+        catch (ApiException ex)
+        {
+            _checkoutError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _checkoutError = ex.Message;
+        }
+        finally
+        {
+            _checkoutPlan = null;
+        }
+    }
+}

@@ -1,0 +1,169 @@
+@page "/student/progress"
+@implements IDisposable
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+
+<PageTitle>Progress — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
+        <h1 class="page-title">My progress</h1>
+        <p class="page-sub mb-6">Track your mastery across subjects and your activity over time.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading progress…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else if (_progress is not null)
+        {
+            <section class="overview card" aria-label="Overall mastery">
+                <div>
+                    <p class="overview-label">Overall mastery</p>
+                    <p class="overview-value">@MasteryPct(_progress.OverallMastery)%</p>
+                </div>
+                <MasteryBadge Band="_progress.OverallBand" />
+                <div class="overview-lessons">
+                    <p class="overview-label">Lessons completed</p>
+                    <p class="overview-value-sm">@_progress.LessonsCompleted / @_progress.TotalLessons</p>
+                </div>
+            </section>
+
+            <div class="progress-grid mt-6">
+                <section class="card" aria-labelledby="subjects-h">
+                    <h2 id="subjects-h" class="card-title">Subjects</h2>
+                    @if (_progress.Subjects.Count == 0)
+                    {
+                        <p class="text-slate-500">No subject data yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="subject-progress">
+                            @foreach (var s in _progress.Subjects)
+                            {
+                                <li>
+                                    <div class="sp-row">
+                                        <span class="sp-name">@s.SubjectName</span>
+                                        <MasteryBadge Band="s.Band" ShowLabel="false" />
+                                    </div>
+                                    <div class="sp-bar" role="meter" aria-valuemin="0" aria-valuemax="100"
+                                         aria-valuenow="@MasteryPct(s.MasteryScore)" aria-label="@($"{s.SubjectName} mastery")">
+                                        <span style="width:@MasteryPct(s.MasteryScore)%"></span>
+                                    </div>
+                                    <p class="sp-meta">@s.LessonsCompleted / @s.TotalLessons lessons · @MasteryPct(s.MasteryScore)%</p>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </section>
+
+                <aside class="home-side">
+                    <section class="card" aria-labelledby="activity-h">
+                        <h2 id="activity-h" class="card-title">Activity</h2>
+                        <ProgressHeatmap Cells="_progress.Heatmap" />
+                    </section>
+
+                    @if (_progress.Badges.Count > 0)
+                    {
+                        <section class="card" aria-labelledby="badges-h">
+                            <h2 id="badges-h" class="card-title">Badges</h2>
+                            <ul class="badge-grid">
+                                @foreach (var b in _progress.Badges)
+                                {
+                                    <li title="@($"Awarded {b.AwardedAt.LocalDateTime:d MMM yyyy}")">
+                                        <span class="badge-icon" aria-hidden="true">@(b.Icon ?? "🏅")</span>
+                                        <span class="badge-name">@b.Name</span>
+                                    </li>
+                                }
+                            </ul>
+                        </section>
+                    }
+                </aside>
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .overview { display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .overview-label { font-size: .75rem; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
+    .overview-value { font-size: 2rem; font-weight: 800; color: #0f172a; }
+    .overview-value-sm { font-size: 1.3rem; font-weight: 700; color: #0f172a; }
+    .overview-lessons { margin-left: auto; }
+    .progress-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .subject-progress { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
+    .sp-row { display: flex; align-items: center; justify-content: space-between; }
+    .sp-name { font-weight: 600; color: #1e293b; }
+    .sp-bar { background: #e2e8f0; border-radius: 9999px; height: .55rem; overflow: hidden; margin: .35rem 0; }
+    .sp-bar span { display: block; height: 100%; background: var(--brand-500); border-radius: 9999px; }
+    .sp-meta { font-size: .78rem; color: #64748b; }
+    .home-side { display: flex; flex-direction: column; gap: 1.5rem; }
+    .badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: .6rem; }
+    .badge-grid li { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .25rem; padding: .6rem; border: 1px solid #f1f5f9; border-radius: .5rem; }
+    .badge-grid .badge-icon { font-size: 1.5rem; }
+    .badge-name { font-size: .78rem; color: #334155; }
+    @@media (min-width: 1024px) { .progress-grid { grid-template-columns: 2fr 1fr; } }
+</style>
+
+@code {
+    private ProgressDto? _progress;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Current.OnChange += OnStudentChanged;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            Current.EnsureDefault(Auth.Students);
+            var studentId = Current.StudentId
+                ?? Auth.User?.StudentId
+                ?? Auth.Students.FirstOrDefault()?.Id;
+            if (studentId is null)
+            {
+                _error = "No student profile is linked to your account.";
+                return;
+            }
+            _progress = await Api.GetStudentProgressAsync(studentId.Value);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load your progress. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async void OnStudentChanged()
+    {
+        await LoadAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static int MasteryPct(double v) => (int)Math.Round(v * (v <= 1 ? 100 : 1));
+
+    public void Dispose() => Current.OnChange -= OnStudentChanged;
+}

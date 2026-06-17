@@ -1,0 +1,35 @@
+# =============================================================================
+# cerdikMY — systemd unit (alternative to running deploy.sh by hand)
+#
+# Runs the whole Docker Compose stack as a managed service that restarts on
+# failure and starts on boot. Use this OR deploy.sh — not both for lifecycle.
+#
+# Install:
+#   sudo cp infra/hostinger/cerdikmy.service /etc/systemd/system/cerdikmy.service
+#   # Adjust WorkingDirectory below to your checkout path (default /opt/cerdikmy).
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now cerdikmy.service
+#   sudo systemctl status cerdikmy.service
+# =============================================================================
+[Unit]
+Description=cerdikMY full stack (Docker Compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/cerdikmy
+EnvironmentFile=/opt/cerdikmy/.env
+
+# Build/refresh then run in the foreground so systemd tracks the lifecycle.
+ExecStartPre=/usr/bin/docker compose -f infra/docker/docker-compose.yml --env-file .env pull --ignore-buildable
+ExecStart=/usr/bin/docker compose -f infra/docker/docker-compose.yml --env-file .env up --build
+ExecStop=/usr/bin/docker compose -f infra/docker/docker-compose.yml --env-file .env down
+
+Restart=always
+RestartSec=10
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

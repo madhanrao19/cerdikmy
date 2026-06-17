@@ -1,0 +1,236 @@
+@* Renders a list of questions (by QuestionType), collects answers into a
+   Dictionary<string,string>, and displays per-question feedback from the
+   AttemptResultDto after submission. Fully keyboard accessible. *@
+<section class="quiz-card" aria-labelledby="@_titleId">
+    <header class="quiz-head">
+        <h2 id="@_titleId" class="quiz-title">@Title</h2>
+        @if (Result is not null)
+        {
+            <div class="quiz-score" role="status" aria-live="polite">
+                <span class="score-pct">@Math.Round(Result.PercentScore)%</span>
+                <span class="@(Result.Passed ? "score-pass" : "score-fail")">
+                    @(Result.Passed ? "Passed" : "Keep practising")
+                </span>
+                <MasteryBadge Band="Result.TahapPenguasaan" />
+            </div>
+        }
+    </header>
+
+    <EditForm EditContext="_editContext" OnValidSubmit="SubmitAsync">
+        <ol class="quiz-questions">
+            @foreach (var (q, index) in Questions.Select((q, i) => (q, i + 1)))
+            {
+                var feedback = ResultFor(q.Id);
+                <li class="quiz-question @(feedback is null ? "" : feedback.Correct ? "q-correct" : "q-wrong")">
+                    <fieldset>
+                        <legend class="q-prompt">
+                            <span class="q-index">@index.</span> @q.Prompt
+                            <span class="q-points">@q.Points pt@(q.Points == 1 ? "" : "s")</span>
+                        </legend>
+
+                        @RenderInput(q)
+
+                        @if (!string.IsNullOrWhiteSpace(q.Hint) && feedback is null)
+                        {
+                            <p class="q-hint">💡 @q.Hint</p>
+                        }
+
+                        @if (feedback is not null)
+                        {
+                            <div class="q-feedback" role="note">
+                                <p class="q-result @(feedback.Correct ? "ok" : "no")">
+                                    @(feedback.Correct ? "✓ Correct" : "✗ Incorrect")
+                                </p>
+                                @if (!feedback.Correct)
+                                {
+                                    <p class="q-correct-answer">Correct answer: <strong>@feedback.Correct_Answer</strong></p>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(feedback.Explanation))
+                                {
+                                    <p class="q-explanation">@feedback.Explanation</p>
+                                }
+                            </div>
+                        }
+                    </fieldset>
+                </li>
+            }
+        </ol>
+
+        @if (_error is not null)
+        {
+            <p class="quiz-error" role="alert">@_error</p>
+        }
+
+        @if (Result is null)
+        {
+            <div class="quiz-actions">
+                <button type="submit" class="btn-primary" disabled="@_submitting">
+                    @(_submitting ? "Submitting…" : "Submit answers")
+                </button>
+            </div>
+        }
+        else if (AllowRetry)
+        {
+            <div class="quiz-actions">
+                <button type="button" class="btn-secondary" @onclick="Retry">Try again</button>
+            </div>
+        }
+    </EditForm>
+</section>
+
+<style>
+    .quiz-card { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1.25rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    .quiz-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+    .quiz-title { font-size: 1.15rem; font-weight: 700; color: #0f172a; }
+    .quiz-score { display: flex; align-items: center; gap: .6rem; font-size: .85rem; }
+    .score-pct { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+    .score-pass { color: #047857; font-weight: 600; }
+    .score-fail { color: #b45309; font-weight: 600; }
+    .quiz-questions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
+    .quiz-question { border: 1px solid #e2e8f0; border-radius: .6rem; padding: 1rem; }
+    .quiz-question.q-correct { border-color: #6ee7b7; background: #f0fdf4; }
+    .quiz-question.q-wrong { border-color: #fca5a5; background: #fef2f2; }
+    .quiz-question fieldset { border: 0; margin: 0; padding: 0; }
+    .q-prompt { font-weight: 600; color: #1e293b; display: block; margin-bottom: .6rem; }
+    .q-index { color: var(--brand-600); }
+    .q-points { float: right; font-size: .72rem; font-weight: 500; color: #64748b; }
+    .q-options { display: flex; flex-direction: column; gap: .4rem; }
+    .q-option { display: flex; align-items: center; gap: .5rem; padding: .35rem .5rem; border-radius: .4rem; cursor: pointer; }
+    .q-option:hover { background: #f1f5f9; }
+    .q-hint { font-size: .8rem; color: #64748b; margin-top: .5rem; }
+    .q-feedback { margin-top: .75rem; font-size: .85rem; }
+    .q-result.ok { color: #047857; font-weight: 600; }
+    .q-result.no { color: #b91c1c; font-weight: 600; }
+    .q-correct-answer { margin-top: .25rem; color: #334155; }
+    .q-explanation { margin-top: .25rem; color: #475569; }
+    .quiz-actions { margin-top: 1rem; }
+    .quiz-error { margin-top: .75rem; color: #b91c1c; font-size: .85rem; }
+    .true-false { display: flex; gap: .5rem; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<QuestionDto> Questions { get; set; } = Array.Empty<QuestionDto>();
+    [Parameter] public string Title { get; set; } = "Quiz";
+    [Parameter] public bool AllowRetry { get; set; } = true;
+
+    /// <summary>Called with the collected answers; returns the graded result.</summary>
+    [Parameter, EditorRequired] public Func<IReadOnlyDictionary<string, string>, Task<AttemptResultDto>> OnSubmit { get; set; } = default!;
+
+    /// <summary>Raised when the student chooses to retry.</summary>
+    [Parameter] public EventCallback OnRetry { get; set; }
+
+    private readonly Dictionary<string, string> _answers = new();
+    private readonly string _titleId = $"quiz-{Guid.NewGuid():N}";
+    private EditContext _editContext = default!;
+    private bool _submitting;
+    private string? _error;
+
+    public AttemptResultDto? Result { get; private set; }
+
+    protected override void OnInitialized() => _editContext = new EditContext(_answers);
+
+    private QuestionResultDto? ResultFor(string questionId)
+        => Result?.Questions.FirstOrDefault(r => r.QuestionId == questionId);
+
+    private void SetAnswer(string questionId, string value) => _answers[questionId] = value;
+
+    private string GetAnswer(string questionId) => _answers.TryGetValue(questionId, out var v) ? v : "";
+
+    private RenderFragment RenderInput(QuestionDto q) => builder =>
+    {
+        var disabled = Result is not null;
+        switch (q.Type)
+        {
+            case QuestionType.MultipleChoice:
+            case QuestionType.Ordering:
+                RenderChoices(builder, q, disabled, q.Options);
+                break;
+            case QuestionType.TrueFalse:
+                RenderChoices(builder, q, disabled, new[] { "True", "False" });
+                break;
+            case QuestionType.Numeric:
+                RenderText(builder, q, disabled, inputMode: "numeric", type: "number");
+                break;
+            default: // ShortAnswer
+                RenderText(builder, q, disabled, inputMode: "text", type: "text");
+                break;
+        }
+    };
+
+    private void RenderChoices(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder,
+        QuestionDto q, bool disabled, IReadOnlyList<string> options)
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", "q-options");
+        builder.AddAttribute(seq++, "role", "radiogroup");
+        builder.AddAttribute(seq++, "aria-label", q.Prompt);
+        foreach (var opt in options)
+        {
+            var id = $"{q.Id}-{opt}";
+            builder.OpenElement(seq++, "label");
+            builder.AddAttribute(seq++, "class", "q-option");
+            builder.AddAttribute(seq++, "for", id);
+
+            builder.OpenElement(seq++, "input");
+            builder.AddAttribute(seq++, "type", "radio");
+            builder.AddAttribute(seq++, "id", id);
+            builder.AddAttribute(seq++, "name", q.Id);
+            builder.AddAttribute(seq++, "value", opt);
+            builder.AddAttribute(seq++, "checked", GetAnswer(q.Id) == opt);
+            builder.AddAttribute(seq++, "disabled", disabled);
+            builder.AddAttribute(seq++, "onchange",
+                EventCallback.Factory.Create<ChangeEventArgs>(this, _ => SetAnswer(q.Id, opt)));
+            builder.CloseElement();
+
+            builder.OpenElement(seq++, "span");
+            builder.AddContent(seq++, opt);
+            builder.CloseElement();
+
+            builder.CloseElement(); // label
+        }
+        builder.CloseElement(); // div
+    }
+
+    private void RenderText(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder,
+        QuestionDto q, bool disabled, string inputMode, string type)
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "input");
+        builder.AddAttribute(seq++, "class", "input");
+        builder.AddAttribute(seq++, "type", type);
+        builder.AddAttribute(seq++, "inputmode", inputMode);
+        builder.AddAttribute(seq++, "aria-label", q.Prompt);
+        builder.AddAttribute(seq++, "value", GetAnswer(q.Id));
+        builder.AddAttribute(seq++, "disabled", disabled);
+        builder.AddAttribute(seq++, "oninput",
+            EventCallback.Factory.Create<ChangeEventArgs>(this, e => SetAnswer(q.Id, e.Value?.ToString() ?? "")));
+        builder.CloseElement();
+    }
+
+    private async Task SubmitAsync()
+    {
+        _error = null;
+        _submitting = true;
+        try
+        {
+            Result = await OnSubmit(new Dictionary<string, string>(_answers));
+        }
+        catch (Exception ex)
+        {
+            _error = ex is ApiException api ? api.Message : "We couldn't submit your answers. Please try again.";
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private async Task Retry()
+    {
+        Result = null;
+        _answers.Clear();
+        _editContext = new EditContext(_answers);
+        await OnRetry.InvokeAsync();
+    }
+}

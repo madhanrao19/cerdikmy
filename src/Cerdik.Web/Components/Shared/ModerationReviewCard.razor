@@ -1,0 +1,96 @@
+@* A single moderation queue item with optional allow / block / escalate
+   actions. When ReadOnly is set (e.g. the parent flags view) action buttons are
+   hidden and only the status is shown. *@
+<article class="mod-card risk-@Item.Risk.ToString().ToLowerInvariant()">
+    <header class="mod-head">
+        <div>
+            <h3 class="mod-student">@Item.StudentName</h3>
+            <p class="mod-meta">
+                <span class="risk-pill risk-@Item.Risk.ToString().ToLowerInvariant()">@Item.Risk risk</span>
+                <span>@Item.Stage</span>
+                <span aria-hidden="true">·</span>
+                <time datetime="@Item.CreatedAt.ToString("o")">@Item.CreatedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</time>
+            </p>
+        </div>
+        @if (Item.Reviewed)
+        {
+            <span class="status-pill reviewed">Reviewed: @Item.Decision</span>
+        }
+        else if (Item.InterventionRaised)
+        {
+            <span class="status-pill escalated">Escalated</span>
+        }
+        else
+        {
+            <span class="status-pill open">Open</span>
+        }
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(Item.Categories))
+    {
+        <p class="mod-categories"><strong>Categories:</strong> @Item.Categories</p>
+    }
+    @if (!string.IsNullOrWhiteSpace(Item.Reason))
+    {
+        <p class="mod-reason">@Item.Reason</p>
+    }
+
+    @if (!ReadOnly && !Item.Reviewed)
+    {
+        <div class="mod-notes">
+            <label class="sr-only" for="@_notesId">Reviewer notes</label>
+            <input id="@_notesId" class="input" type="text" placeholder="Optional notes…"
+                   value="@_notes" @oninput="e => _notes = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="mod-actions" role="group" aria-label="Moderation decision">
+            <button type="button" class="btn-secondary action-allow" @onclick="() => OnAllow.InvokeAsync(_notes)">
+                ✓ Allow
+            </button>
+            <button type="button" class="btn-secondary action-escalate" @onclick="() => OnEscalate.InvokeAsync(_notes)">
+                ⤴ Escalate
+            </button>
+            <button type="button" class="btn-danger" @onclick="() => OnBlock.InvokeAsync(_notes)">
+                ✕ Block
+            </button>
+        </div>
+    }
+</article>
+
+<style>
+    .mod-card { background: #fff; border: 1px solid #e2e8f0; border-left-width: 4px; border-radius: .75rem; padding: 1rem; display: flex; flex-direction: column; gap: .6rem; }
+    .mod-card.risk-low { border-left-color: #34d399; }
+    .mod-card.risk-medium { border-left-color: #fbbf24; }
+    .mod-card.risk-high { border-left-color: #fb7185; }
+    .mod-card.risk-critical { border-left-color: #dc2626; }
+    .mod-card.risk-none { border-left-color: #cbd5e1; }
+    .mod-head { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+    .mod-student { font-weight: 700; color: #0f172a; }
+    .mod-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .78rem; color: #64748b; margin-top: .25rem; }
+    .risk-pill { font-weight: 600; padding: .1rem .45rem; border-radius: 9999px; }
+    .risk-pill.risk-low { background: #d1fae5; color: #065f46; }
+    .risk-pill.risk-medium { background: #fef3c7; color: #92400e; }
+    .risk-pill.risk-high { background: #ffe4e6; color: #9f1239; }
+    .risk-pill.risk-critical { background: #fee2e2; color: #991b1b; }
+    .risk-pill.risk-none { background: #f1f5f9; color: #475569; }
+    .status-pill { font-size: .72rem; font-weight: 600; padding: .15rem .55rem; border-radius: 9999px; white-space: nowrap; }
+    .status-pill.open { background: #fef9c3; color: #854d0e; }
+    .status-pill.reviewed { background: #d1fae5; color: #065f46; }
+    .status-pill.escalated { background: #ffe4e6; color: #9f1239; }
+    .mod-categories, .mod-reason { font-size: .85rem; color: #334155; margin: 0; }
+    .mod-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .action-allow { color: #047857; }
+    .action-escalate { color: #b45309; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public ModerationQueueItemDto Item { get; set; } = default!;
+    [Parameter] public bool ReadOnly { get; set; }
+
+    /// <summary>Invoked with the reviewer notes for each decision.</summary>
+    [Parameter] public EventCallback<string?> OnAllow { get; set; }
+    [Parameter] public EventCallback<string?> OnBlock { get; set; }
+    [Parameter] public EventCallback<string?> OnEscalate { get; set; }
+
+    private string _notes = "";
+    private readonly string _notesId = $"mod-notes-{Guid.NewGuid():N}";
+}

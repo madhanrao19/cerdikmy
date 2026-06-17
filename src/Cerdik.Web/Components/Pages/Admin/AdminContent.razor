@@ -1,0 +1,87 @@
+@page "/admin/content"
+@inject ApiClient Api
+
+<PageTitle>Content — cerdikMY Admin</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Admin, UserRole.ContentAdmin })">
+        <h1 class="page-title">Content management</h1>
+        <p class="page-sub mb-6">Publish or unpublish lessons across school-type, language and DLP variants.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading content…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else
+        {
+            <AdminDataTable TItem="AdminContentItemDto" Items="_items"
+                            SearchText="@(c => $"{c.Title} {c.SubjectName} {c.SchoolType} {c.Language}")"
+                            SearchPlaceholder="Search lessons">
+                <HeaderTemplate>
+                    <th>Lesson</th><th>Subject</th><th>Variant</th><th>State</th><th>Blocks</th><th></th>
+                </HeaderTemplate>
+                <RowTemplate Context="c">
+                    <td>@c.Title</td>
+                    <td>@c.SubjectName</td>
+                    <td><span class="role-pill">@c.SchoolType / @c.Language @(c.DlpMode == DlpMode.None ? "" : "/ DLP")</span></td>
+                    <td><span class="state-@c.State.ToString().ToLower()">@c.State</span></td>
+                    <td>@c.BlockCount</td>
+                    <td class="text-right">
+                        @if (c.State == PublishState.Published)
+                        {
+                            <button class="btn-secondary" @onclick="() => TogglePublish(c, false)">Unpublish</button>
+                        }
+                        else
+                        {
+                            <button class="btn-primary" @onclick="() => TogglePublish(c, true)">Publish</button>
+                        }
+                    </td>
+                </RowTemplate>
+                <EmptyContent><p>No lessons yet.</p></EmptyContent>
+            </AdminDataTable>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .role-pill { font-size: .72rem; font-weight: 600; background: var(--brand-50); color: var(--brand-700); padding: .1rem .5rem; border-radius: 9999px; }
+    .state-published { color: #047857; font-weight: 600; }
+    .state-draft, .state-unpublished { color: #b45309; font-weight: 600; }
+</style>
+
+@code {
+    private IReadOnlyList<AdminContentItemDto> _items = Array.Empty<AdminContentItemDto>();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try { _items = await Api.GetAdminContentAsync(); }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (Exception) { _error = "We couldn't load content. Please try again."; }
+        finally { _loading = false; }
+    }
+
+    private async Task TogglePublish(AdminContentItemDto item, bool publish)
+    {
+        try
+        {
+            await Api.PublishContentAsync(item.LessonId, publish);
+            await LoadAsync();
+        }
+        catch (Exception) { _error = "We couldn't update that lesson. Please try again."; }
+    }
+}

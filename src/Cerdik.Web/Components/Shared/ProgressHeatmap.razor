@@ -1,0 +1,116 @@
+@* GitHub-style activity heatmap spanning ~12 weeks. Cells are coloured by
+   intensity (activity count) with accessible titles and labels. *@
+<div class="heatmap" role="img" aria-label="@AriaSummary">
+    <div class="heatmap-grid">
+        @foreach (var week in BuildWeeks())
+        {
+            <div class="heatmap-week">
+                @foreach (var cell in week)
+                {
+                    @if (cell is null)
+                    {
+                        <span class="heatmap-cell empty" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <span class="heatmap-cell level-@Intensity(cell)"
+                              title="@CellTitle(cell)"></span>
+                    }
+                }
+            </div>
+        }
+    </div>
+    <div class="heatmap-legend" aria-hidden="true">
+        <span>Less</span>
+        <span class="heatmap-cell level-0"></span>
+        <span class="heatmap-cell level-1"></span>
+        <span class="heatmap-cell level-2"></span>
+        <span class="heatmap-cell level-3"></span>
+        <span class="heatmap-cell level-4"></span>
+        <span>More</span>
+    </div>
+</div>
+
+<style>
+    .heatmap { display: inline-flex; flex-direction: column; gap: .5rem; }
+    .heatmap-grid { display: flex; gap: 3px; overflow-x: auto; }
+    .heatmap-week { display: flex; flex-direction: column; gap: 3px; }
+    .heatmap-cell { width: 14px; height: 14px; border-radius: 3px; background: #ebedf0; }
+    .heatmap-cell.empty { background: transparent; }
+    .level-0 { background: #ebedf0; }
+    .level-1 { background: var(--brand-100); }
+    .level-2 { background: var(--brand-300); }
+    .level-3 { background: var(--brand-500); }
+    .level-4 { background: var(--brand-700); }
+    .heatmap-legend { display: flex; align-items: center; gap: 4px; font-size: .72rem; color: #64748b; }
+    .heatmap-legend .heatmap-cell { width: 12px; height: 12px; }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ProgressHeatCell> Cells { get; set; } = Array.Empty<ProgressHeatCell>();
+    [Parameter] public int Weeks { get; set; } = 12;
+
+    private Dictionary<DateOnly, ProgressHeatCell> _byDate = new();
+    private int _max = 1;
+
+    protected override void OnParametersSet()
+    {
+        _byDate = Cells.GroupBy(c => c.Date).ToDictionary(g => g.Key, g => g.First());
+        _max = Cells.Count == 0 ? 1 : Math.Max(1, Cells.Max(c => c.Count));
+    }
+
+    private string AriaSummary
+    {
+        get
+        {
+            var active = Cells.Count(c => c.Count > 0);
+            var minutes = Cells.Sum(c => c.Minutes);
+            return $"Activity heatmap over the last {Weeks} weeks: {active} active days, {minutes} total minutes.";
+        }
+    }
+
+    // Build a grid of weeks (columns) x 7 days (rows), ending today.
+    private IEnumerable<List<ProgressHeatCell?>> BuildWeeks()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        // Align the end of the grid to the end of the current week (Sunday).
+        var daysToSunday = ((int)DayOfWeek.Sunday - (int)today.DayOfWeek + 7) % 7;
+        var end = today.AddDays(daysToSunday);
+        var totalDays = Weeks * 7;
+        var start = end.AddDays(-(totalDays - 1));
+
+        for (var w = 0; w < Weeks; w++)
+        {
+            var week = new List<ProgressHeatCell?>(7);
+            for (var d = 0; d < 7; d++)
+            {
+                var date = start.AddDays(w * 7 + d);
+                if (date > today)
+                {
+                    week.Add(null);
+                }
+                else
+                {
+                    week.Add(_byDate.TryGetValue(date, out var c) ? c : new ProgressHeatCell(date, 0, 0));
+                }
+            }
+            yield return week;
+        }
+    }
+
+    private int Intensity(ProgressHeatCell cell)
+    {
+        if (cell.Count <= 0) return 0;
+        var ratio = (double)cell.Count / _max;
+        return ratio switch
+        {
+            <= 0.25 => 1,
+            <= 0.5 => 2,
+            <= 0.75 => 3,
+            _ => 4,
+        };
+    }
+
+    private static string CellTitle(ProgressHeatCell cell)
+        => $"{cell.Date:ddd, d MMM yyyy}: {cell.Count} activit{(cell.Count == 1 ? "y" : "ies")}, {cell.Minutes} min";
+}

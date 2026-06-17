@@ -1,0 +1,141 @@
+@inject AuthStateService Auth
+
+@* Curriculum filter controls. Raises OnChange with the assembled CurriculumFilter.
+   ZH / TA language options and DLP mode are disabled when the matching feature
+   flag in AuthStateService.Features is off. *@
+<form class="filter-bar" role="search" aria-label="Curriculum filters" @onsubmit="Emit" @onsubmit:preventDefault>
+    <div class="filter-grid">
+        <div>
+            <label class="label" for="flt-version">Curriculum</label>
+            <select id="flt-version" class="input" value="@_versionCode" @onchange="OnVersionChanged">
+                <option value="">All versions</option>
+                @foreach (var v in Versions)
+                {
+                    <option value="@v.Code">@v.Name</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="label" for="flt-level">Level</label>
+            <select id="flt-level" class="input" value="@_level" @onchange="OnLevelChanged">
+                <option value="">All levels</option>
+                @foreach (var l in Enum.GetValues<Level>())
+                {
+                    <option value="@l">@FilterLabels.Level(l)</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="label" for="flt-school">School type</label>
+            <select id="flt-school" class="input" value="@_schoolType" @onchange="OnSchoolChanged">
+                <option value="">All school types</option>
+                @foreach (var st in Enum.GetValues<SchoolType>())
+                {
+                    <option value="@st">@st</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="label" for="flt-language">Language</label>
+            <select id="flt-language" class="input" value="@_language" @onchange="OnLanguageChanged">
+                <option value="">All languages</option>
+                @foreach (var lang in Enum.GetValues<Language>())
+                {
+                    var disabled = IsLanguageDisabled(lang);
+                    <option value="@lang" disabled="@disabled">
+                        @FilterLabels.Language(lang)@(disabled ? " (upgrade required)" : "")
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="label" for="flt-dlp">DLP mode</label>
+            <select id="flt-dlp" class="input" value="@_dlpMode" @onchange="OnDlpChanged" disabled="@DlpDisabled">
+                <option value="">Any</option>
+                @foreach (var d in Enum.GetValues<DlpMode>())
+                {
+                    <option value="@d">@FilterLabels.Dlp(d)</option>
+                }
+            </select>
+            @if (DlpDisabled)
+            {
+                <p class="text-xs text-slate-500 mt-1">DLP filtering is not available on your plan.</p>
+            }
+        </div>
+    </div>
+
+    <div class="filter-actions">
+        <button type="submit" class="btn-primary">Apply</button>
+        <button type="button" class="btn-secondary" @onclick="Reset">Reset</button>
+    </div>
+</form>
+
+<style>
+    .filter-bar { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,.05); }
+    .filter-grid { display: grid; grid-template-columns: 1fr; gap: .75rem; }
+    .filter-actions { display: flex; gap: .5rem; margin-top: 1rem; }
+    @@media (min-width: 640px) { .filter-grid { grid-template-columns: repeat(2, 1fr); } }
+    @@media (min-width: 1024px) { .filter-grid { grid-template-columns: repeat(5, 1fr); } }
+</style>
+
+@code {
+    [Parameter] public IReadOnlyList<CurriculumVersionDto> Versions { get; set; } = Array.Empty<CurriculumVersionDto>();
+    [Parameter] public CurriculumFilter Value { get; set; } = new();
+    [Parameter] public EventCallback<CurriculumFilter> OnChange { get; set; }
+
+    private string _versionCode = "";
+    private string _level = "";
+    private string _schoolType = "";
+    private string _language = "";
+    private string _dlpMode = "";
+
+    protected override void OnParametersSet()
+    {
+        _versionCode = Value.CurriculumVersionCode ?? "";
+        _level = Value.Level?.ToString() ?? "";
+        _schoolType = Value.SchoolType?.ToString() ?? "";
+        _language = Value.Language?.ToString() ?? "";
+        _dlpMode = Value.DlpMode?.ToString() ?? "";
+    }
+
+    // Feature flags gate ZH/TA languages and DLP filtering.
+    private bool IsLanguageDisabled(Language lang) => lang switch
+    {
+        Language.ZH => !Auth.HasFeature("zh"),
+        Language.TA => !Auth.HasFeature("ta"),
+        _ => false,
+    };
+
+    private bool DlpDisabled => !Auth.HasFeature("dlp");
+
+    private void OnVersionChanged(ChangeEventArgs e) => _versionCode = e.Value?.ToString() ?? "";
+    private void OnLevelChanged(ChangeEventArgs e) => _level = e.Value?.ToString() ?? "";
+    private void OnSchoolChanged(ChangeEventArgs e) => _schoolType = e.Value?.ToString() ?? "";
+    private void OnLanguageChanged(ChangeEventArgs e) => _language = e.Value?.ToString() ?? "";
+    private void OnDlpChanged(ChangeEventArgs e) => _dlpMode = e.Value?.ToString() ?? "";
+
+    private async Task Emit()
+    {
+        var filter = new CurriculumFilter(
+            CurriculumVersionCode: string.IsNullOrEmpty(_versionCode) ? null : _versionCode,
+            Level: ParseEnum<Level>(_level),
+            SchoolType: ParseEnum<SchoolType>(_schoolType),
+            Language: ParseEnum<Language>(_language),
+            DlpMode: DlpDisabled ? null : ParseEnum<DlpMode>(_dlpMode),
+            SubjectId: Value.SubjectId);
+        await OnChange.InvokeAsync(filter);
+    }
+
+    private async Task Reset()
+    {
+        _versionCode = _level = _schoolType = _language = _dlpMode = "";
+        await OnChange.InvokeAsync(new CurriculumFilter());
+    }
+
+    private static T? ParseEnum<T>(string value) where T : struct, Enum
+        => Enum.TryParse<T>(value, out var v) ? v : null;
+}
