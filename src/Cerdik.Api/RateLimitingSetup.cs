@@ -41,14 +41,14 @@ public static class RateLimitingSetup
                     Window = TimeSpan.FromMinutes(1),
                 }));
 
-            options.OnRejected = (context, ct) =>
+            options.OnRejected = async (context, ct) =>
             {
                 if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
                 {
                     context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
                 }
                 context.HttpContext.Response.ContentType = "application/json";
-                return context.HttpContext.Response.WriteAsync(
+                await context.HttpContext.Response.WriteAsync(
                     "{\"error\":\"Too many requests. Please slow down.\",\"code\":\"rate_limited\"}", ct);
             };
         });
