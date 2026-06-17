@@ -7,6 +7,7 @@ using Cerdik.Infrastructure.Options;
 using Cerdik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -14,6 +15,7 @@ namespace Cerdik.Api.Controllers;
 
 [ApiController]
 [Route("auth")]
+[EnableRateLimiting(RateLimitingSetup.Auth)]
 public sealed class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;

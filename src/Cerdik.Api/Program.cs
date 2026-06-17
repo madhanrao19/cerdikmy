@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Cerdik.Api;
 using Cerdik.Api.Auth;
+using Cerdik.Api.Health;
 using Cerdik.Domain;
 using Cerdik.Infrastructure;
 using Cerdik.Infrastructure.Jobs;
@@ -9,6 +10,7 @@ using Cerdik.Infrastructure.Persistence;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -17,6 +19,9 @@ using Serilog;
 EnvLoader.Load();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Don't advertise the server stack.
+builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
 
 // Pull flat env vars (DATABASE_URL, JWT_*, …) into IConfiguration.
 builder.Configuration.AddEnvironmentVariables();
@@ -38,6 +43,9 @@ builder.Services.AddControllers().AddJsonOptions(o =>
 });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+
+// ---- Per-IP rate limiting (enforced outside the Testing environment) ----
+builder.Services.AddCerdikRateLimiting();
 
 // ---- Auth: JWT bearer read from httpOnly cookie OR Authorization header ----
 var jwtAccessSecret = builder.Configuration["JWT_ACCESS_SECRET"] ?? "dev-access-secret-change-me-min-32-chars-long-000";
@@ -112,7 +120,9 @@ builder.Services.AddOpenTelemetry()
         }
     });
 
-builder.Services.AddHealthChecks();
+// ---- Health checks: /health/live (process) + /health/ready (DB) ----
+builder.Services.AddHealthChecks()
+    .AddCheck<DbHealthCheck>("database", tags: ["ready"]);
 
 var app = builder.Build();
 
@@ -124,9 +134,17 @@ if (args.Contains("--migrate") || args.Contains("--seed"))
     return;
 }
 
+// ---- Fail fast on dangerous misconfiguration (weak/empty JWT signing keys) ----
+StartupValidation.ValidateOrThrow(app.Services, app.Environment, app.Logger);
+
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors("web");
+if (!isTesting)
+{
+    app.UseRateLimiter();
+}
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -147,7 +165,11 @@ if (!isTesting)
 }
 
 app.MapControllers();
-app.MapHealthChecks("/health");
+
+// Liveness = process is up (no dependency checks). Readiness = dependencies (DB) are reachable.
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
+app.MapHealthChecks("/health"); // all checks (back-compat)
 
 // Auto initialize + seed on startup (idempotent). Disable with SEED_ON_STARTUP=false.
 if (builder.Configuration["SEED_ON_STARTUP"] != "false")
