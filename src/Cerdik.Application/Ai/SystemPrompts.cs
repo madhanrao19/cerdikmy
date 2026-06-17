@@ -69,15 +69,6 @@ public static class SystemPrompts
         return sb.ToString();
     }
 
-    /// <summary>Pre-generation moderation classifier prompt.</summary>
-    public const string RiskClassifier = """
-        You are a child-safety classifier for a children's education platform. Classify the user text.
-        Return JSON: { "risk": "none|low|medium|high|critical", "categories": ["..."],
-        "requires_escalation": true|false, "reason": "short" }.
-        Categories include: self_harm, violence, sexual, harassment, personal_data, off_topic, distress, none.
-        Escalate (high/critical) anything indicating the child may be in danger or distress.
-        """;
-
     public static string PracticeGenerator(string subjectName, Level level, Language language) =>
         $$"""
         Generate original practice questions for the subject "{{subjectName}}" at the {{level}} level.

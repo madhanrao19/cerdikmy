@@ -74,24 +74,11 @@ public sealed record ActivityDto(
     int PassThresholdPercent,
     IReadOnlyList<QuestionDto> Questions);
 
+// Correct answers are intentionally omitted from client-facing DTOs; grading happens server-side.
 public sealed record QuestionDto(
     string Id,
     string Prompt,
     QuestionType Type,
     IReadOnlyList<string> Options,
     int Points,
-    string? Hint)
-{
-    /// <summary>Correct answer is intentionally omitted from client-facing DTOs;
-    /// it lives in <see cref="GradedQuestion"/> server-side only.</summary>
-}
-
-public sealed record GradedQuestion(
-    string Id,
-    string Prompt,
-    QuestionType Type,
-    IReadOnlyList<string> Options,
-    int Points,
-    string? Hint,
-    string CorrectAnswer,
-    string? Explanation);
+    string? Hint);
