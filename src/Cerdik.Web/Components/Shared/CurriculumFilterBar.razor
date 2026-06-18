@@ -102,15 +102,18 @@
         _dlpMode = Value.DlpMode?.ToString() ?? "";
     }
 
-    // Feature flags gate ZH/TA languages and DLP filtering.
+    // Feature flags gate ZH/TA languages and DLP filtering. Keys match those published by /me
+    // (see FeatureFlags.Defaults): lang.zh, lang.ta, and per-subject dlp.* flags.
     private bool IsLanguageDisabled(Language lang) => lang switch
     {
-        Language.ZH => !Auth.HasFeature("zh"),
-        Language.TA => !Auth.HasFeature("ta"),
+        Language.ZH => !Auth.HasFeature("lang.zh"),
+        Language.TA => !Auth.HasFeature("lang.ta"),
         _ => false,
     };
 
-    private bool DlpDisabled => !Auth.HasFeature("dlp");
+    // DLP filtering is available once any subject's DLP rollout flag (dlp.*) is enabled.
+    private bool DlpDisabled => !Auth.Features.Any(f =>
+        f.Key.StartsWith("dlp.", StringComparison.OrdinalIgnoreCase) && f.Value);
 
     private void OnVersionChanged(ChangeEventArgs e) => _versionCode = e.Value?.ToString() ?? "";
     private void OnLevelChanged(ChangeEventArgs e) => _level = e.Value?.ToString() ?? "";
