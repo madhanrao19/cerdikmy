@@ -25,26 +25,37 @@ operator rather than hard-coded.
 
 ### 1. Real EF Core migrations (replace `EnsureCreated`)
 First boot currently calls `EnsureCreated` + applies the native `VECTOR` index. For schema evolution,
-generate a migration history:
+generate a migration history. The tooling is wired up and turnkey — a design-time
+`AppDbContextFactory` (`src/Cerdik.Infrastructure/Persistence/AppDbContextFactory.cs`) lets the EF CLI
+build the context without booting the API, so generation is a one-liner on any machine with the
+.NET 10 SDK:
 
 ```bash
-dotnet tool install --global dotnet-ef
-dotnet ef migrations add Initial -p src/Cerdik.Infrastructure -s src/Cerdik.Api
-# Review the generated migration, then on deploy:
+./scripts/generate-initial-migration.sh        # wraps: dotnet ef migrations add Initial …
+# Review src/Cerdik.Infrastructure/Persistence/Migrations/, then on deploy:
 dotnet Cerdik.Api.dll --migrate
 ```
 
-Once migrations exist, `DbInitializer` automatically prefers `Migrate()` over `EnsureCreated()`.
+Once a migration is present, `DbInitializer` automatically prefers `Migrate()` over `EnsureCreated()` —
+no app changes required.
+
+> Why isn't the migration committed already? The environment that generated this repo cannot install
+> the .NET SDK (its download hosts are outside the network allowlist), and a hand-written EF migration
+> + model snapshot can't be verified without the tooling — so it's generated where an SDK exists rather
+> than shipped unverified.
 
 ### 2. Dependency vulnerability audit
-CI surfaces transitive advisories (e.g. `System.Security.Cryptography.Xml`, `OpenTelemetry.Api`).
-Resolve them with a tool that can reach NuGet (not pinned blindly here to avoid breaking a verified build):
+The two advisories CI originally surfaced are now resolved in `Directory.Packages.props`:
+- `System.Security.Cryptography.Xml` is forced to the patched **10.0.9** via a `GlobalPackageReference`
+  (overriding the vulnerable transitive 9.0.0).
+- OpenTelemetry packages were bumped to **1.15.x**, pulling a patched `OpenTelemetry.Api`.
+
+Keep auditing on a cadence with a tool that can reach NuGet:
 
 ```bash
 dotnet restore
 dotnet list package --vulnerable --include-transitive
-# Add a pinned, patched <PackageVersion> to Directory.Packages.props for each flagged package,
-# then re-run the audit until clean. Consider enabling <NuGetAudit>true</NuGetAudit> as a gate.
+# Pin any newly-flagged package in Directory.Packages.props; consider <NuGetAudit>true</NuGetAudit> as a gate.
 ```
 
 ### 3. Secrets management
