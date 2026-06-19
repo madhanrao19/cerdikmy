@@ -1,0 +1,189 @@
+@page "/admin/curriculum"
+@inject ApiClient Api
+
+<PageTitle>Curriculum — cerdikMY Admin</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Admin, UserRole.ContentAdmin })">
+        <h1 class="page-title">Curriculum management</h1>
+        <p class="page-sub mb-6">Browse KPM-aligned curriculum versions, subjects and their school-type / language / DLP variants.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading curriculum…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else
+        {
+            <div class="card mb-6">
+                <CurriculumFilterBar Versions="_versions" Value="_filter" OnChange="OnFilterChanged" />
+            </div>
+
+            <div class="kpis mb-6">
+                <div class="kpi"><div class="kpi-value">@_versions.Count</div><div class="kpi-label">Curriculum versions</div></div>
+                <div class="kpi"><div class="kpi-value">@_subjects.Count</div><div class="kpi-label">Subjects</div></div>
+                <div class="kpi"><div class="kpi-value">@_subjects.Sum(s => s.Variants.Count)</div><div class="kpi-label">Variants</div></div>
+            </div>
+
+            @if (_subjects.Count == 0)
+            {
+                <div class="card"><p>No subjects match the current filter.</p></div>
+            }
+            else
+            {
+                <div class="space-y-4">
+                    @foreach (var s in _subjects)
+                    {
+                        <div class="card subject-card">
+                            <div class="subject-head">
+                                <div>
+                                    <h2 class="card-title">@s.Name <span class="grade">· @s.GradeBand</span></h2>
+                                    <p class="subject-meta">@s.Code · @FilterLabels.Level(s.Level)</p>
+                                </div>
+                                <button class="btn-secondary" @onclick="() => ToggleStandards(s.Id)">
+                                    @(_openStandards.Contains(s.Id) ? "Hide standards" : "View standards")
+                                </button>
+                            </div>
+
+                            <div class="variants">
+                                @if (s.Variants.Count == 0)
+                                {
+                                    <span class="text-slate-500 text-sm">No variants published.</span>
+                                }
+                                @foreach (var v in s.Variants)
+                                {
+                                    <span class="variant-pill" title="@v.State">
+                                        @v.SchoolType / @FilterLabels.Language(v.Language)@(v.DlpMode == DlpMode.None ? "" : " · DLP")
+                                    </span>
+                                }
+                            </div>
+
+                            @if (_openStandards.Contains(s.Id))
+                            {
+                                <div class="standards">
+                                    @if (_standards.TryGetValue(s.Id, out var stds))
+                                    {
+                                        @if (stds.Count == 0)
+                                        {
+                                            <p class="text-slate-500 text-sm">No learning standards recorded.</p>
+                                        }
+                                        else
+                                        {
+                                            <ul class="std-list">
+                                                @foreach (var std in stds)
+                                                {
+                                                    <li>
+                                                        <span class="std-code">@std.Code</span>
+                                                        <span class="std-strand">@std.Strand</span>
+                                                        <span class="std-desc">@std.Description</span>
+                                                        <MasteryBadge Band="std.TargetBand" ShowLabel="false" />
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <p class="text-slate-500 text-sm" role="status">Loading standards…</p>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .kpi { background: #fff; border: 1px solid #e8edf6; border-radius: 1rem; padding: 1rem 1.25rem; }
+    .kpi-value { font-size: 1.6rem; font-weight: 800; color: var(--brand-700); }
+    .kpi-label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
+    .subject-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+    .grade { color: #64748b; font-weight: 500; }
+    .subject-meta { color: #64748b; font-size: .8rem; margin-top: .15rem; }
+    .variants { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .85rem; }
+    .variant-pill { font-size: .72rem; font-weight: 700; background: var(--brand-50); color: var(--brand-700); padding: .2rem .6rem; border-radius: 9999px; }
+    .standards { margin-top: 1rem; border-top: 1px solid #eef2f9; padding-top: .85rem; }
+    .std-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: .55rem; }
+    .std-list li { display: grid; grid-template-columns: 3.5rem 8rem 1fr auto; gap: .6rem; align-items: center; font-size: .85rem; }
+    .std-code { font-weight: 700; color: var(--brand-700); }
+    .std-strand { color: #475569; font-weight: 600; }
+    .std-desc { color: #334155; }
+    @@media (max-width: 767px) {
+        .kpis { grid-template-columns: 1fr; }
+        .std-list li { grid-template-columns: 1fr; gap: .15rem; }
+        .subject-head { flex-direction: column; }
+    }
+</style>
+
+@code {
+    private IReadOnlyList<CurriculumVersionDto> _versions = Array.Empty<CurriculumVersionDto>();
+    private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
+    private readonly Dictionary<Guid, IReadOnlyList<LearningStandardDto>> _standards = new();
+    private readonly HashSet<Guid> _openStandards = new();
+    private CurriculumFilter _filter = new();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _versions = await Api.GetCurriculumVersionsAsync();
+            _subjects = await Api.GetSubjectsAsync(_filter);
+        }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (Exception) { _error = "We couldn't load the curriculum. Please try again."; }
+        finally { _loading = false; }
+    }
+
+    private async Task OnFilterChanged(CurriculumFilter filter)
+    {
+        _filter = filter;
+        _openStandards.Clear();
+        try
+        {
+            _subjects = await Api.GetSubjectsAsync(_filter);
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't apply that filter. Please try again.";
+        }
+    }
+
+    private async Task ToggleStandards(Guid subjectId)
+    {
+        if (!_openStandards.Add(subjectId))
+        {
+            _openStandards.Remove(subjectId);
+            return;
+        }
+        if (!_standards.ContainsKey(subjectId))
+        {
+            try
+            {
+                _standards[subjectId] = await Api.GetStandardsAsync(subjectId);
+            }
+            catch (Exception)
+            {
+                _standards[subjectId] = Array.Empty<LearningStandardDto>();
+            }
+        }
+    }
+}
