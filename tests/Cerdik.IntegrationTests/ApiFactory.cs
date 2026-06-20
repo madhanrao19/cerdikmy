@@ -16,6 +16,9 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
     public const string ParentEmail = "parent.demo@cerdik.my";
     public const string ParentPassword = "Demo!2345";
 
+    /// <summary>Captures outbound email so tests can assert on it (e.g. read a reset link).</summary>
+    public CapturingEmailSender Email { get; } = new();
+
     // Program.cs reads configuration (DATABASE_URL, environment) BEFORE builder.Build(), so the
     // factory's ConfigureAppConfiguration/UseEnvironment (applied at build time) would be too late.
     // Set them as real process env vars here so they're visible when the host's entry point runs.
@@ -46,6 +49,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             foreach (var d in toRemove) services.Remove(d);
 
             services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("cerdik-integration-tests"));
+
+            // Capture outbound email instead of hitting SMTP.
+            foreach (var d in services.Where(x => x.ServiceType == typeof(Cerdik.Application.Abstractions.IEmailSender)).ToList())
+            {
+                services.Remove(d);
+            }
+            services.AddSingleton<Cerdik.Application.Abstractions.IEmailSender>(Email);
         });
     }
 

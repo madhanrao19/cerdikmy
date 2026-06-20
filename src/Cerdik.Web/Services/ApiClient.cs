@@ -52,6 +52,12 @@ public sealed class ApiClient
     public Task LogoutAsync(CancellationToken ct = default)
         => PostNoContentAsync("/auth/logout", ct);
 
+    public Task ForgotPasswordAsync(string email, CancellationToken ct = default)
+        => PostNoContentAsync("/auth/forgot-password", new ForgotPasswordRequest(email), ct);
+
+    public Task ResetPasswordAsync(string token, string newPassword, CancellationToken ct = default)
+        => PostNoContentAsync("/auth/reset-password", new ResetPasswordRequest(token, newPassword), ct);
+
     public Task<MeResponse> GetMeAsync(CancellationToken ct = default)
         => GetAsync<MeResponse>("/me", ct);
 
