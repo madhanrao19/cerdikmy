@@ -193,6 +193,8 @@ services:
       API_BASE_URL: "${API_BASE_URL:-http://api:8080}"
       NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-http://localhost:5080}"
       SESSION_COOKIE_DOMAIN: "${SESSION_COOKIE_DOMAIN:-localhost}"
+      # Allow lesson media from the dev MinIO origin in the web app's CSP (prod https is allowed by default).
+      MEDIA_CSP_ORIGINS: "${MEDIA_CSP_ORIGINS:-http://localhost:9000}"
       JWT_ISSUER: "${JWT_ISSUER:-cerdikmy}"
       JWT_AUDIENCE: "${JWT_AUDIENCE:-cerdikmy-clients}"
       OTEL_EXPORTER_OTLP_ENDPOINT: "${OTEL_EXPORTER_OTLP_ENDPOINT:-}"

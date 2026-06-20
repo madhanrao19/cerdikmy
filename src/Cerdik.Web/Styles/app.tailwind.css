@@ -1,5 +1,10 @@
-/* Public Sans is SELF-HOSTED via @font-face in wwwroot/css/app.css (no external CDN).
-   See wwwroot/fonts/README.md to add the woff2 files; the system stack is the fallback. */
+/* Public Sans is SELF-HOSTED (no external CDN). Add the woff2 files per wwwroot/fonts/README.md;
+   the system stack is the graceful fallback. These rules must match wwwroot/css/app.css. */
+@font-face { font-family:"Public Sans"; font-style:normal; font-weight:400; font-display:swap; src:url("/fonts/public-sans-400.woff2") format("woff2"); }
+@font-face { font-family:"Public Sans"; font-style:normal; font-weight:500; font-display:swap; src:url("/fonts/public-sans-500.woff2") format("woff2"); }
+@font-face { font-family:"Public Sans"; font-style:normal; font-weight:600; font-display:swap; src:url("/fonts/public-sans-600.woff2") format("woff2"); }
+@font-face { font-family:"Public Sans"; font-style:normal; font-weight:700; font-display:swap; src:url("/fonts/public-sans-700.woff2") format("woff2"); }
+@font-face { font-family:"Public Sans"; font-style:normal; font-weight:800; font-display:swap; src:url("/fonts/public-sans-800.woff2") format("woff2"); }
 
 @tailwind base;
 @tailwind components;
