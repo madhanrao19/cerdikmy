@@ -109,6 +109,8 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.Organization).WithMany(o => o.Users).HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Household).WithMany(h => h.Members).HasForeignKey(x => x.HouseholdId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.SetNull);
+            // Soft-deleted / anonymized accounts (privacy delete) are excluded from all queries.
+            e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
         b.Entity<RefreshToken>(e =>
@@ -124,6 +126,8 @@ public class AppDbContext : DbContext
             e.HasOne(x => x.Household).WithMany(h => h.Students).HasForeignKey(x => x.HouseholdId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Organization).WithMany().HasForeignKey(x => x.OrganizationId).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.DisplayName).HasMaxLength(120);
+            // Soft-deleted students (privacy delete) are excluded from all queries.
+            e.HasQueryFilter(x => x.DeletedAt == null);
         });
 
         b.Entity<StudentGuardian>(e =>
