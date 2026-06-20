@@ -1,0 +1,43 @@
+@implements IDisposable
+@inject AuthStateService Auth
+
+@* Fixed bottom navigation bar shown on small screens (Stitch mobile pattern). Shares its items with
+   the desktop sidebar via NavRegistry, so the two never drift. The drawer (☰) still provides any
+   overflow items beyond the primary five. *@
+<nav class="bottom-nav" aria-label="Primary (mobile)">
+    @foreach (var item in Items())
+    {
+        <NavLink class="bn-link" href="@item.Href"
+                 Match="@(item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
+            <span class="bn-icon" aria-hidden="true">@item.Icon</span>
+            <span class="bn-label">@item.Label</span>
+        </NavLink>
+    }
+</nav>
+
+<style>
+    .bottom-nav {
+        display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+        background: #fff; border-top: 1px solid #e8edf6;
+        padding: .3rem .25rem calc(.3rem + env(safe-area-inset-bottom, 0px));
+        justify-content: space-around; box-shadow: 0 -2px 12px rgba(15, 23, 42, .06);
+    }
+    .bn-link {
+        flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+        padding: .4rem .2rem; border-radius: .55rem; color: #64748b;
+        font-size: .66rem; font-weight: 600; text-decoration: none; min-width: 0;
+    }
+    .bn-link.active { color: var(--brand-700); background: var(--brand-50); }
+    .bn-link:focus-visible { outline: 2px solid var(--brand-300); outline-offset: 1px; }
+    .bn-icon { font-size: 1.15rem; line-height: 1; }
+    .bn-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    @@media (max-width: 767px) { .bottom-nav { display: flex; } }
+</style>
+
+@code {
+    private IEnumerable<NavEntry> Items() => NavRegistry.For(Auth.Role).Take(5);
+
+    protected override void OnInitialized() => Auth.OnChange += StateHasChanged;
+
+    public void Dispose() => Auth.OnChange -= StateHasChanged;
+}
