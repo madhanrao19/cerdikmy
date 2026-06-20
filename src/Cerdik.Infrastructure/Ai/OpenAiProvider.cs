@@ -59,9 +59,36 @@ public sealed class OpenAiProvider : IAiProvider
         });
     }
 
-    // Safety classification stays deterministic and provider-independent.
-    public Task<RiskClassification> ClassifyRiskAsync(string text, CancellationToken ct = default) =>
-        Task.FromResult(Heuristics.ClassifyRisk(text));
+    // Model-based moderation via OpenAI's purpose-built /v1/moderations endpoint. The deterministic
+    // Heuristics layer is the fallback (and ModerationService still takes the stricter of the two),
+    // so safety never depends solely on the API call. Azure relies on its built-in content filter.
+    public async Task<RiskClassification> ClassifyRiskAsync(string text, CancellationToken ct = default)
+    {
+        if (_azure || string.IsNullOrWhiteSpace(_opt.OpenAiApiKey))
+        {
+            return Heuristics.ClassifyRisk(text);
+        }
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/moderations")
+            {
+                Content = JsonContent.Create(new { model = "omni-moderation-latest", input = text }),
+            };
+            req.Headers.Authorization = new("Bearer", _opt.OpenAiApiKey);
+            using var resp = await _http.SendAsync(req, ct);
+            resp.EnsureSuccessStatusCode();
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync(ct));
+            if (doc.RootElement.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
+            {
+                return RiskParsing.FromOpenAiModeration(results[0]);
+            }
+        }
+        catch
+        {
+            // Network/parse failure must never weaken safety — fall back to deterministic heuristics.
+        }
+        return Heuristics.ClassifyRisk(text);
+    }
 
     public async Task<PracticeSet> GeneratePracticeSetAsync(PracticeRequest request, CancellationToken ct = default)
     {

@@ -25,17 +25,15 @@ public static class SystemPrompts
         - Use simple, age-appropriate language. Be concise.
         """;
 
-    /// <summary>Instructs the model to emit the structured JSON envelope we parse.</summary>
-    private const string OutputContract = """
-        OUTPUT FORMAT:
-        Return a single JSON object with this exact shape:
-        {
-          "answer_markdown": "string (markdown, with [n] citation markers)",
-          "citations": [ { "ref": 1, "chunk_id": "guid", "lesson_id": "guid", "snippet": "string" } ],
-          "mastery_signal": 1..6 or null,   // your estimate of the child's Tahap Penguasaan on this topic
-          "needs_review": true|false        // true if a human adult should review this exchange
-        }
-        Do not include any text outside the JSON object.
+    /// <summary>Child-safety classifier prompt used by the model-based moderation path
+    /// (see Anthropic provider). The deterministic Heuristics layer remains the fallback/safety net.</summary>
+    public const string RiskClassifier = """
+        You are a child-safety classifier for a children's education platform. Classify the USER text only.
+        Return a single JSON object: { "risk": "none|low|medium|high|critical",
+        "categories": ["..."], "requires_escalation": true|false, "reason": "short" }.
+        Categories include: self_harm, violence, sexual, harassment, personal_data, distress, off_topic, none.
+        Set risk to high/critical and requires_escalation=true for anything indicating the child may be in
+        danger, distress, or self-harm. Output only the JSON object, no other text.
         """;
 
     public static string TutorSystem(Level level, Language language, string subjectName)
@@ -65,7 +63,10 @@ public static class SystemPrompts
         sb.AppendLine();
         sb.AppendLine(SafetyCore);
         sb.AppendLine();
-        sb.AppendLine(OutputContract);
+        // Reply in clean Markdown prose (NOT JSON) so it streams readably to the child. Cite the
+        // grounding passages inline as [1], [2]. The platform derives citations, mastery and the
+        // review flag itself, so the model only needs to teach well and cite.
+        sb.AppendLine("Reply in friendly Markdown. Use [n] markers to cite the context passages you used.");
         return sb.ToString();
     }
 
