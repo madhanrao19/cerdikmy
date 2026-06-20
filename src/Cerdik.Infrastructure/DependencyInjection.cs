@@ -35,6 +35,7 @@ public static class DependencyInjection
         // Core services
         services.AddHttpContextAccessor();
         services.AddSingleton<IClock, SystemClock>();
+        services.AddSingleton<Observability.AiMetrics>();
         services.AddSingleton<IPasswordHasher, BcryptPasswordHasher>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<ICurrentUser, CurrentUser>();

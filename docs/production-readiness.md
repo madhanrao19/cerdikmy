@@ -75,9 +75,14 @@ limiting (`limit_req_zone`) as a second layer in front of the app limiter.
 - Document RPO/RTO targets.
 
 ### 6. Monitoring & alerting
-- Point the OTLP exporter at a collector (Tempo/Jaeger/App Insights) and add metrics + dashboards.
+- **Traces + metrics** are emitted via OpenTelemetry (ASP.NET Core, HttpClient, and a custom
+  `cerdik.ai` meter/source: `cerdik.tutor.messages`, `cerdik.tutor.latency`, `cerdik.moderation.events`,
+  plus a `tutor.generate` span). Every response carries an `X-Correlation-ID` (honoured inbound) that is
+  also attached to the trace and every Serilog log line for the request.
+- Point the OTLP exporter (`OTEL_EXPORTER_OTLP_ENDPOINT`) at a collector (Tempo/Jaeger/Prometheus/App
+  Insights) and build dashboards from the above.
 - Alert on: `/health/ready` failing, 5xx rate, auth 429 spikes, Hangfire failed jobs, AI provider errors,
-  webhook signature failures.
+  `cerdik.moderation.events` with decision=Escalate, webhook signature failures.
 
 ### 7. Scaling notes
 - API and Worker are stateless and scale horizontally; the Blazor Server app uses SignalR — enable

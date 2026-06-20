@@ -1,6 +1,7 @@
 using Cerdik.Application.Abstractions;
 using Cerdik.Application.Ai;
 using Cerdik.Domain;
+using Cerdik.Infrastructure.Observability;
 
 namespace Cerdik.Infrastructure.Ai;
 
@@ -10,8 +11,13 @@ namespace Cerdik.Infrastructure.Ai;
 public sealed class ModerationService : IModerationService
 {
     private readonly IAiProviderFactory _factory;
+    private readonly AiMetrics _metrics;
 
-    public ModerationService(IAiProviderFactory factory) => _factory = factory;
+    public ModerationService(IAiProviderFactory factory, AiMetrics metrics)
+    {
+        _factory = factory;
+        _metrics = metrics;
+    }
 
     public async Task<ModerationOutcome> ScreenAsync(string text, ModerationStage stage, CancellationToken ct = default)
     {
@@ -45,6 +51,7 @@ public sealed class ModerationService : IModerationService
         // Raise an intervention for anything that needs an adult to look at it.
         var raise = escalate || risk >= RiskLevel.High;
 
+        _metrics.RecordModeration(stage.ToString(), decision.ToString(), risk.ToString());
         return new ModerationOutcome(decision, risk, categories, raise, reason);
     }
 }

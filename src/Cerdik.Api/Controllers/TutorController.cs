@@ -5,6 +5,7 @@ using Cerdik.Application.Ai;
 using Cerdik.Application.Dtos;
 using Cerdik.Domain;
 using Cerdik.Domain.Entities;
+using Cerdik.Infrastructure.Observability;
 using Cerdik.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,16 +27,18 @@ public sealed class TutorController : ControllerBase
     private readonly IAiProviderFactory _ai;
     private readonly IVectorRetriever _retriever;
     private readonly IModerationService _moderation;
+    private readonly AiMetrics _metrics;
 
     public TutorController(
         AppDbContext db, ICurrentUser current, IAiProviderFactory ai,
-        IVectorRetriever retriever, IModerationService moderation)
+        IVectorRetriever retriever, IModerationService moderation, AiMetrics metrics)
     {
         _db = db;
         _current = current;
         _ai = ai;
         _retriever = retriever;
         _moderation = moderation;
+        _metrics = metrics;
     }
 
     [HttpPost("sessions")]
@@ -188,22 +191,34 @@ public sealed class TutorController : ControllerBase
 
         var provider = _ai.Resolve();
         TutorReply reply;
-        if (streamWriter is not null)
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        using (var span = AiMetrics.Source.StartActivity("tutor.generate"))
         {
-            var sb = new StringBuilder();
-            TutorReply? final = null;
-            await foreach (var chunk in provider.StreamTutorReplyAsync(prompt, ct))
+            span?.SetTag("ai.provider", provider.Name);
+            span?.SetTag("subject", subjectName);
+            span?.SetTag("level", student.Level.ToString());
+            span?.SetTag("streaming", streamWriter is not null);
+            span?.SetTag("context.chunks", context.Count);
+
+            if (streamWriter is not null)
             {
-                if (chunk.IsFinal) { final = chunk.Final; break; }
-                sb.Append(chunk.DeltaMarkdown);
-                await streamWriter(chunk.DeltaMarkdown);
+                var sb = new StringBuilder();
+                TutorReply? final = null;
+                await foreach (var chunk in provider.StreamTutorReplyAsync(prompt, ct))
+                {
+                    if (chunk.IsFinal) { final = chunk.Final; break; }
+                    sb.Append(chunk.DeltaMarkdown);
+                    await streamWriter(chunk.DeltaMarkdown);
+                }
+                reply = final ?? new TutorReply { AnswerMarkdown = sb.ToString(), Citations = TutorReplyComposerCitations(context) };
             }
-            reply = final ?? new TutorReply { AnswerMarkdown = sb.ToString(), Citations = TutorReplyComposerCitations(context) };
+            else
+            {
+                reply = await provider.GenerateTutorReplyAsync(prompt, ct);
+            }
         }
-        else
-        {
-            reply = await provider.GenerateTutorReplyAsync(prompt, ct);
-        }
+        sw.Stop();
+        _metrics.RecordTutorMessage(sw.Elapsed.TotalMilliseconds, provider.Name);
 
         // 4) Post-generation moderation on the produced answer.
         var post = await _moderation.ScreenAsync(reply.AnswerMarkdown, ModerationStage.PostGeneration, ct);
