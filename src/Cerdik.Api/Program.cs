@@ -6,12 +6,14 @@ using Cerdik.Api.Health;
 using Cerdik.Domain;
 using Cerdik.Infrastructure;
 using Cerdik.Infrastructure.Jobs;
+using Cerdik.Infrastructure.Observability;
 using Cerdik.Infrastructure.Persistence;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -107,16 +109,26 @@ if (!isTesting)
     builder.Services.AddHangfireServer();
 }
 
-// ---- OpenTelemetry (tracing) ----
+// ---- OpenTelemetry (tracing + metrics) ----
 var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
 builder.Services.AddOpenTelemetry()
     .ConfigureResource(r => r.AddService(builder.Configuration["OTEL_SERVICE_NAME"] ?? "cerdikmy-api"))
     .WithTracing(t =>
     {
         t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation();
+        t.AddSource(AiMetrics.ActivitySourceName); // custom tutor spans
         if (!string.IsNullOrWhiteSpace(otlpEndpoint))
         {
             t.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
+        }
+    })
+    .WithMetrics(m =>
+    {
+        m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation();
+        m.AddMeter(AiMetrics.MeterName); // custom tutor/moderation metrics
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        {
+            m.AddOtlpExporter(o => o.Endpoint = new Uri(otlpEndpoint));
         }
     });
 
@@ -137,6 +149,7 @@ if (args.Contains("--migrate") || args.Contains("--seed"))
 // ---- Fail fast on dangerous misconfiguration (weak/empty JWT signing keys) ----
 StartupValidation.ValidateOrThrow(app.Services, app.Environment, app.Logger);
 
+app.UseMiddleware<CorrelationMiddleware>();
 app.UseSerilogRequestLogging();
 app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseMiddleware<SecurityHeadersMiddleware>();
