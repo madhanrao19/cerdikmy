@@ -50,9 +50,12 @@ ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_RUNNING_IN_CONTAINER=true \
     DOTNET_gcServer=1
 
-# curl is used by the container HEALTHCHECK below.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+# curl is used by the container HEALTHCHECK below. Retry apt to tolerate transient mirror hiccups.
+RUN for i in 1 2 3 4 5; do \
+      apt-get update -o Acquire::Retries=5 && \
+      apt-get install -y --no-install-recommends -o Acquire::Retries=5 curl && break || \
+      { echo "apt attempt $i failed; retrying in 10s"; sleep 10; }; \
+    done \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app/publish ./

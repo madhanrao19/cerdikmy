@@ -56,8 +56,28 @@ public sealed class AnthropicProvider : IAiProvider
         });
     }
 
-    public Task<RiskClassification> ClassifyRiskAsync(string text, CancellationToken ct = default) =>
-        Task.FromResult(Heuristics.ClassifyRisk(text));
+    // Model-based moderation: ask the model to classify risk as JSON, parse it, and fall back to the
+    // deterministic Heuristics layer if the key is unset or the call/parse fails (safety net).
+    public async Task<RiskClassification> ClassifyRiskAsync(string text, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(_opt.AnthropicApiKey))
+        {
+            return Heuristics.ClassifyRisk(text);
+        }
+        try
+        {
+            var content = await CompleteAsync(SystemPrompts.RiskClassifier, text, ct);
+            if (RiskParsing.ParseClassifierJson(content) is { } parsed)
+            {
+                return parsed;
+            }
+        }
+        catch
+        {
+            // Fall back to deterministic heuristics on any failure.
+        }
+        return Heuristics.ClassifyRisk(text);
+    }
 
     public async Task<PracticeSet> GeneratePracticeSetAsync(PracticeRequest request, CancellationToken ct = default)
     {
