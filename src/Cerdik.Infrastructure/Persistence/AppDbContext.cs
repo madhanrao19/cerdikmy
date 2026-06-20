@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Household> Households => Set<Household>();
     public DbSet<User> Users => Set<User>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<Student> Students => Set<Student>();
     public DbSet<StudentGuardian> StudentGuardians => Set<StudentGuardian>();
     public DbSet<Consent> Consents => Set<Consent>();
@@ -118,6 +119,14 @@ public class AppDbContext : DbContext
             e.HasIndex(x => x.TokenHash);
             e.Property(x => x.TokenHash).HasMaxLength(200);
             e.HasOne(x => x.User).WithMany(u => u.RefreshTokens).HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.Ignore(x => x.IsActive);
+        });
+
+        b.Entity<PasswordResetToken>(e =>
+        {
+            e.HasIndex(x => x.TokenHash);
+            e.Property(x => x.TokenHash).HasMaxLength(200);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.Ignore(x => x.IsActive);
         });
 

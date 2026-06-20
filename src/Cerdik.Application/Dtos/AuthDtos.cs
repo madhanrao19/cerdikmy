@@ -5,6 +5,8 @@ namespace Cerdik.Application.Dtos;
 public sealed record RegisterParentRequest(string Email, string Password, string FullName, string HouseholdName, string PreferredLanguage);
 public sealed record RegisterStudentRequest(Guid HouseholdId, string DisplayName, string? Email, string? Password, Level Level, SchoolType SchoolType, Language PrimaryLanguage, DlpMode DlpMode, DateOnly? DateOfBirth);
 public sealed record LoginRequest(string Email, string Password);
+public sealed record ForgotPasswordRequest(string Email);
+public sealed record ResetPasswordRequest(string Token, string NewPassword);
 
 /// <summary>Returned in the response body; tokens are also set as httpOnly cookies.</summary>
 public sealed record AuthResponse(UserDto User, string AccessToken, DateTimeOffset AccessExpiresAt);

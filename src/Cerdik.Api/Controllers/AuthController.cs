@@ -1,6 +1,8 @@
+using System.Security.Cryptography;
 using Cerdik.Api.Auth;
 using Cerdik.Application.Abstractions;
 using Cerdik.Application.Dtos;
+using Cerdik.Application.Email;
 using Cerdik.Domain;
 using Cerdik.Domain.Entities;
 using Cerdik.Infrastructure.Options;
@@ -18,14 +20,19 @@ namespace Cerdik.Api.Controllers;
 [EnableRateLimiting(RateLimitingSetup.Auth)]
 public sealed class AuthController : ControllerBase
 {
+    private const int ResetTokenTtlMinutes = 30;
+
     private readonly AppDbContext _db;
     private readonly IPasswordHasher _hasher;
     private readonly ITokenService _tokens;
     private readonly JwtOptions _jwt;
     private readonly IClock _clock;
     private readonly ICurrentUser _current;
+    private readonly IEmailSender _email;
+    private readonly IConfiguration _config;
 
-    public AuthController(AppDbContext db, IPasswordHasher hasher, ITokenService tokens, IOptions<JwtOptions> jwt, IClock clock, ICurrentUser current)
+    public AuthController(AppDbContext db, IPasswordHasher hasher, ITokenService tokens, IOptions<JwtOptions> jwt,
+        IClock clock, ICurrentUser current, IEmailSender email, IConfiguration config)
     {
         _db = db;
         _hasher = hasher;
@@ -33,6 +40,8 @@ public sealed class AuthController : ControllerBase
         _jwt = jwt.Value;
         _clock = clock;
         _current = current;
+        _email = email;
+        _config = config;
     }
 
     [HttpPost("register-parent")]
@@ -61,7 +70,74 @@ public sealed class AuthController : ControllerBase
         _db.Consents.Add(new Consent { User = user, Type = ConsentType.DataProcessing, Granted = true });
         await _db.SaveChangesAsync(ct);
 
+        // Best-effort welcome email (SmtpEmailSender never throws into the request).
+        var welcome = EmailTemplates.Welcome(user.FullName ?? "there");
+        await _email.SendAsync(user.Email, welcome.Subject, welcome.Html, ct);
+
         return await IssueAsync(user, ct);
+    }
+
+    /// <summary>Always returns 200 (never reveals whether an account exists). When the email maps to an
+    /// active account, a single-use, time-limited reset link is emailed.</summary>
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest req, CancellationToken ct)
+    {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == req.Email && u.IsActive, ct);
+        if (user is not null)
+        {
+            var prior = await _db.PasswordResetTokens.Where(t => t.UserId == user.Id && t.UsedAt == null).ToListAsync(ct);
+            foreach (var t in prior) t.UsedAt = _clock.UtcNow;
+
+            var raw = GenerateOpaqueToken();
+            _db.PasswordResetTokens.Add(new PasswordResetToken
+            {
+                UserId = user.Id,
+                TokenHash = _tokens.HashRefreshToken(raw),
+                ExpiresAt = _clock.UtcNow.AddMinutes(ResetTokenTtlMinutes),
+                RequestedFromIp = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            });
+            await _db.SaveChangesAsync(ct);
+
+            var appUrl = (_config["NEXT_PUBLIC_APP_URL"] ?? "http://localhost:5080").TrimEnd('/');
+            var resetUrl = $"{appUrl}/reset-password?token={Uri.EscapeDataString(raw)}";
+            var (subject, html) = EmailTemplates.PasswordReset(resetUrl, ResetTokenTtlMinutes);
+            await _email.SendAsync(user.Email, subject, html, ct);
+        }
+        return Ok(new { status = "ok" });
+    }
+
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest req, CancellationToken ct)
+    {
+        Validate.Password(req.NewPassword);
+        if (string.IsNullOrWhiteSpace(req.Token))
+        {
+            throw ApiException.BadRequest("Reset token is required.", "invalid_token");
+        }
+
+        var hash = _tokens.HashRefreshToken(req.Token);
+        var token = await _db.PasswordResetTokens.Include(t => t.User)
+            .FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
+        if (token is null || token.User is null || token.UsedAt != null || token.ExpiresAt < _clock.UtcNow)
+        {
+            throw ApiException.BadRequest("This reset link is invalid or has expired.", "invalid_token");
+        }
+
+        token.User.PasswordHash = _hasher.Hash(req.NewPassword);
+        token.UsedAt = _clock.UtcNow;
+
+        // Revoke all refresh tokens so existing sessions can't continue with the old credentials.
+        var refresh = await _db.RefreshTokens.Where(t => t.UserId == token.UserId && t.RevokedAt == null).ToListAsync(ct);
+        foreach (var t in refresh) t.RevokedAt = _clock.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    private static string GenerateOpaqueToken()
+    {
+        var bytes = RandomNumberGenerator.GetBytes(48);
+        return Convert.ToBase64String(bytes).Replace('+', '-').Replace('/', '_').TrimEnd('=');
     }
 
     [HttpPost("register-student")]

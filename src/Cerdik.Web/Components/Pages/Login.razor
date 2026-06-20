@@ -40,6 +40,7 @@
                 <InputText id="login-password" type="password" class="input" @bind-Value="_model.Password"
                            autocomplete="current-password" aria-describedby="login-password-err" />
                 <ValidationMessage For="() => _model.Password" id="login-password-err" role="alert" />
+                <div class="forgot-row"><a href="/forgot-password">Forgot password?</a></div>
             </div>
 
             <button type="submit" class="btn-accent btn-lg w-full" disabled="@_busy">
@@ -68,6 +69,8 @@
     .auth-error { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: .6rem .75rem; border-radius: .6rem; font-size: .85rem; margin-bottom: 1rem; }
     .auth-foot { margin-top: 1.5rem; font-size: .9rem; color: #475569; text-align: center; }
     .auth-foot a { color: var(--accent-600); font-weight: 700; }
+    .forgot-row { text-align: right; margin-top: .4rem; }
+    .forgot-row a { font-size: .78rem; font-weight: 600; color: var(--accent-600); }
     .auth-meta { margin-top: 1.25rem; font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
     .w-full { width: 100%; }
 </style>
