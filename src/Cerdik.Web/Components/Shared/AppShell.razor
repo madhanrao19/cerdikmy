@@ -46,6 +46,8 @@
             @ChildContent
         </main>
     </div>
+
+    <MobileBottomNav />
 </div>
 
 <style>
@@ -64,6 +66,8 @@
     @@media (max-width: 767px) {
         .app-sidebar { display: none; position: fixed; top: 3.4rem; bottom: 0; left: 0; z-index: 25; box-shadow: 2px 0 12px rgba(15,23,42,.12); }
         .app-sidebar.open { display: block; }
+        /* leave room for the fixed bottom nav bar */
+        .app-main { padding-bottom: 5rem; }
     }
     @@media (min-width: 768px) {
         .app-main { padding: 1.5rem 2rem 3rem; }
