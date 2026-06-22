@@ -21,6 +21,8 @@ namespace Cerdik.Api.Controllers;
 public sealed class AuthController : ControllerBase
 {
     private const int ResetTokenTtlMinutes = 30;
+    private const int MaxFailedLogins = 5;
+    private static readonly TimeSpan LockoutWindow = TimeSpan.FromMinutes(15);
 
     private readonly AppDbContext _db;
     private readonly IPasswordHasher _hasher;
@@ -201,11 +203,34 @@ public sealed class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == req.Email && u.DeletedAt == null, ct);
-        if (user is null || !user.IsActive || !_hasher.Verify(req.Password, user.PasswordHash))
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == req.Email, ct);
+        if (user is null || !user.IsActive)
         {
             throw ApiException.Unauthorized("Invalid email or password.");
         }
+
+        // Account lockout: block while a lockout window is active.
+        if (user.LockoutEndsAt is { } until && until > _clock.UtcNow)
+        {
+            throw new ApiException(StatusCodes.Status429TooManyRequests,
+                "Too many failed attempts. This account is temporarily locked — try again later.", "account_locked");
+        }
+
+        if (!_hasher.Verify(req.Password, user.PasswordHash))
+        {
+            user.FailedLoginCount++;
+            if (user.FailedLoginCount >= MaxFailedLogins)
+            {
+                user.LockoutEndsAt = _clock.UtcNow.Add(LockoutWindow);
+                user.FailedLoginCount = 0;
+            }
+            await _db.SaveChangesAsync(ct);
+            throw ApiException.Unauthorized("Invalid email or password.");
+        }
+
+        // Success — clear any failure state.
+        user.FailedLoginCount = 0;
+        user.LockoutEndsAt = null;
         user.LastLoginAt = _clock.UtcNow;
         await _db.SaveChangesAsync(ct);
         return await IssueAsync(user, ct);
