@@ -48,6 +48,10 @@ public class User : BaseEntity, ITenantScoped
     public bool IsActive { get; set; } = true;
     public DateTimeOffset? LastLoginAt { get; set; }
 
+    // Brute-force protection: consecutive failed logins and an optional temporary lockout window.
+    public int FailedLoginCount { get; set; }
+    public DateTimeOffset? LockoutEndsAt { get; set; }
+
     /// <summary>Set when this account *is* a student login.</summary>
     public Guid? StudentId { get; set; }
     public Student? Student { get; set; }
