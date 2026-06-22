@@ -54,6 +54,7 @@ public static class DependencyInjection
         services.AddScoped<ContentIndexer>();
         services.AddScoped<BackgroundJobs>();
         services.AddScoped<DemoDataSeeder>();
+        services.AddScoped<AdminBootstrapper>();
 
         return services;
     }

@@ -184,12 +184,19 @@ app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => fa
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
 app.MapHealthChecks("/health"); // all checks (back-compat)
 
-// Auto initialize + seed on startup (idempotent). Disable with SEED_ON_STARTUP=false.
+// Auto initialize on startup (idempotent). Disable all of it with SEED_ON_STARTUP=false.
+// Schema is always ensured; the demo seeder only runs outside Production unless SEED_DEMO_DATA
+// forces it (so a Production deploy never gets demo accounts/content or well-known passwords).
+// BOOTSTRAP_ADMIN_* (handled inside DbInitializer) creates the real admin when configured.
 if (builder.Configuration["SEED_ON_STARTUP"] != "false")
 {
+    var seedDemoSetting = builder.Configuration["SEED_DEMO_DATA"];
+    var seedDemo = string.Equals(seedDemoSetting, "true", StringComparison.OrdinalIgnoreCase)
+        || (!app.Environment.IsProduction() && !string.Equals(seedDemoSetting, "false", StringComparison.OrdinalIgnoreCase));
+
     try
     {
-        await DbInitializer.InitializeAsync(app.Services, seed: true);
+        await DbInitializer.InitializeAsync(app.Services, seed: seedDemo);
     }
     catch (Exception ex)
     {

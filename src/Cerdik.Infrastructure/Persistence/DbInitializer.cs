@@ -5,7 +5,9 @@ using Microsoft.Extensions.Logging;
 namespace Cerdik.Infrastructure.Persistence;
 
 /// <summary>Applies the schema (migrations if present, else EnsureCreated for dev), applies the
-/// SQL Server native VECTOR index best-effort, and seeds demo data.</summary>
+/// SQL Server native VECTOR index best-effort, optionally seeds demo data (<paramref name="seed"/>),
+/// and always runs the production-safe <see cref="AdminBootstrapper"/> (a no-op unless
+/// BOOTSTRAP_ADMIN_* is configured).</summary>
 public static class DbInitializer
 {
     public static async Task InitializeAsync(IServiceProvider services, bool seed = true, CancellationToken ct = default)
@@ -40,6 +42,11 @@ public static class DbInitializer
             var seeder = sp.GetRequiredService<DemoDataSeeder>();
             await seeder.SeedAsync(ct);
         }
+
+        // Always safe to run: creates a real admin from BOOTSTRAP_ADMIN_* when configured,
+        // and is a no-op otherwise (or when the account already exists).
+        var bootstrapper = sp.GetRequiredService<AdminBootstrapper>();
+        await bootstrapper.BootstrapAsync(ct);
     }
 
     /// <summary>Best-effort: add a SQL Server 2025 native VECTOR column + ANN index for fast retrieval.
