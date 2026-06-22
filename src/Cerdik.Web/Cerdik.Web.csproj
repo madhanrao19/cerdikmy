@@ -2,6 +2,10 @@
   <PropertyGroup>
     <AssemblyName>Cerdik.Web</AssemblyName>
     <RootNamespace>Cerdik.Web</RootNamespace>
+    <!-- Override the solution-wide InvariantGlobalization=true: the Blazor UI relies on
+         culture-based localization (BM/EN/ZH/TA), which requires ICU to be active. The
+         aspnet runtime base image ships ICU, so this works in the container too. -->
+    <InvariantGlobalization>false</InvariantGlobalization>
   </PropertyGroup>
 
   <ItemGroup>

@@ -3,30 +3,31 @@ using Cerdik.Domain;
 namespace Cerdik.Web.Services;
 
 /// <summary>A single source of truth for the role-aware primary navigation, shared by the desktop
-/// sidebar (<c>NavMenu</c>) and the mobile bottom bar (<c>MobileBottomNav</c>) so they never drift.</summary>
-public sealed record NavEntry(string Href, string Label, string Icon, UserRole[] Roles);
+/// sidebar (<c>NavMenu</c>) and the mobile bottom bar (<c>MobileBottomNav</c>) so they never drift.
+/// <see cref="LabelKey"/> is a localization key resolved via <see cref="IUiText"/>.</summary>
+public sealed record NavEntry(string Href, string LabelKey, string Icon, UserRole[] Roles);
 
 public static class NavRegistry
 {
     public static readonly NavEntry[] All =
     [
         // Parent
-        new("/parent", "Dashboard", "🏠", [UserRole.Parent]),
-        new("/parent/plan", "Plans", "🗓️", [UserRole.Parent]),
-        new("/parent/billing", "Billing", "💳", [UserRole.Parent]),
-        new("/parent/flags", "Safety", "🚩", [UserRole.Parent]),
+        new("/parent", "nav.dashboard", "🏠", [UserRole.Parent]),
+        new("/parent/plan", "nav.plans", "🗓️", [UserRole.Parent]),
+        new("/parent/billing", "nav.billing", "💳", [UserRole.Parent]),
+        new("/parent/flags", "nav.safety", "🚩", [UserRole.Parent]),
         // Student
-        new("/student", "Today", "🏠", [UserRole.Student]),
-        new("/student/tutor", "Tutor", "💬", [UserRole.Student]),
-        new("/student/progress", "Progress", "📈", [UserRole.Student]),
+        new("/student", "nav.today", "🏠", [UserRole.Student]),
+        new("/student/tutor", "nav.tutor", "💬", [UserRole.Student]),
+        new("/student/progress", "nav.progress", "📈", [UserRole.Student]),
         // Admin
-        new("/admin", "Analytics", "📊", [UserRole.Admin, UserRole.ContentAdmin]),
-        new("/admin/users", "Users", "👥", [UserRole.Admin]),
-        new("/admin/content", "Content", "📚", [UserRole.Admin, UserRole.ContentAdmin]),
-        new("/admin/media", "Media", "🖼️", [UserRole.Admin, UserRole.ContentAdmin]),
-        new("/admin/curriculum", "Curriculum", "🧭", [UserRole.Admin, UserRole.ContentAdmin]),
-        new("/admin/moderation", "Moderation", "🛡️", [UserRole.Admin, UserRole.SafetyReviewer]),
-        new("/admin/payments", "Payments", "🧾", [UserRole.Admin]),
+        new("/admin", "nav.analytics", "📊", [UserRole.Admin, UserRole.ContentAdmin]),
+        new("/admin/users", "nav.users", "👥", [UserRole.Admin]),
+        new("/admin/content", "nav.content", "📚", [UserRole.Admin, UserRole.ContentAdmin]),
+        new("/admin/media", "nav.media", "🖼️", [UserRole.Admin, UserRole.ContentAdmin]),
+        new("/admin/curriculum", "nav.curriculum", "🧭", [UserRole.Admin, UserRole.ContentAdmin]),
+        new("/admin/moderation", "nav.moderation", "🛡️", [UserRole.Admin, UserRole.SafetyReviewer]),
+        new("/admin/payments", "nav.payments", "🧾", [UserRole.Admin]),
     ];
 
     public static IEnumerable<NavEntry> For(UserRole? role) =>

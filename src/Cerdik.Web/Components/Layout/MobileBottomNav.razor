@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject AuthStateService Auth
+@inject IUiText T
 
 @* Fixed bottom navigation bar shown on small screens (Stitch mobile pattern). Shares its items with
    the desktop sidebar via NavRegistry, so the two never drift. The drawer (☰) still provides any
@@ -10,7 +11,7 @@
         <NavLink class="bn-link" href="@item.Href"
                  Match="@(item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
             <span class="bn-icon" aria-hidden="true">@item.Icon</span>
-            <span class="bn-label">@item.Label</span>
+            <span class="bn-label">@T[item.LabelKey]</span>
         </NavLink>
     }
 </nav>

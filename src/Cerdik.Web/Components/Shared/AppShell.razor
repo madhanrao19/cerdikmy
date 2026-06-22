@@ -1,6 +1,7 @@
 @implements IDisposable
 @inject AuthStateService Auth
 @inject NavigationManager Nav
+@inject IUiText T
 
 @* Authenticated application chrome: brand header, role-aware sidebar nav,
    student switcher (parents) and the routed page content. *@
@@ -26,12 +27,13 @@
             {
                 <div class="hidden sm:block"><StudentSwitcher /></div>
             }
+            <LanguageSwitcher />
             @if (Auth.IsAuthenticated)
             {
                 <div class="user-box">
                     <span class="user-name" title="@Auth.User?.Email">@(Auth.User?.FullName ?? Auth.User?.Email)</span>
                     <span class="role-pill">@Auth.Role</span>
-                    <button class="btn-secondary" type="button" @onclick="LogoutAsync">Sign out</button>
+                    <button class="btn-secondary" type="button" @onclick="LogoutAsync">@T["app.signout"]</button>
                 </div>
             }
         </div>

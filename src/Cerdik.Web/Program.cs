@@ -36,6 +36,11 @@ builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddScoped<CurrentStudentState>();
 builder.Services.AddSingleton<MarkdownService>();
 
+// Localization (BM / EN / ZH / TA). Culture comes from the .AspNetCore.Culture cookie set by the
+// LanguageSwitcher; English is the fallback.
+builder.Services.AddLocalization();
+builder.Services.AddScoped<IUiText, UiText>();
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -43,6 +48,11 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
+
+app.UseRequestLocalization(new Microsoft.AspNetCore.Builder.RequestLocalizationOptions()
+    .SetDefaultCulture("en")
+    .AddSupportedCultures(UiText.Supported)
+    .AddSupportedUICultures(UiText.Supported));
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseHttpsRedirection();
