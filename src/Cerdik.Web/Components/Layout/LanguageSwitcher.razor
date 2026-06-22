@@ -8,9 +8,9 @@
     <span class="lang-globe" aria-hidden="true">🌐</span>
     <label class="sr-only" for="lang-select">@T["app.language"]</label>
     <select id="lang-select" class="lang-select" value="@T.Lang" @onchange="OnChange" aria-label="@T["app.language"]">
-        @foreach (var (code, name) in UiText.Languages)
+        @foreach (var lang in UiText.Languages)
         {
-            <option value="@code">@name</option>
+            <option value="@lang.Code">@lang.Name</option>
         }
     </select>
 </div>
