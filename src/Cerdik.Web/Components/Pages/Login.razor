@@ -2,10 +2,12 @@
 @using System.ComponentModel.DataAnnotations
 @inject AuthStateService Auth
 @inject NavigationManager Nav
+@inject IUiText T
 
-<PageTitle>Sign in — cerdikMY</PageTitle>
+<PageTitle>@T["auth.signin.title"] — cerdikMY</PageTitle>
 
 <div class="auth-page">
+    <div class="auth-langbar"><LanguageSwitcher /></div>
     <div class="auth-brand-block">
         <span class="logo-mark logo-mark-lg" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -14,11 +16,11 @@
             </svg>
         </span>
         <div class="auth-wordmark">cerdik<span class="brand-accent">MY</span></div>
-        <div class="auth-tag">Malaysian Homeschooling Portal</div>
+        <div class="auth-tag">@T["app.tagline"]</div>
     </div>
     <div class="auth-card">
-        <h1 class="auth-title">Sign in</h1>
-        <p class="auth-sub">Welcome back! Please enter your details.</p>
+        <h1 class="auth-title">@T["auth.signin.title"]</h1>
+        <p class="auth-sub">@T["auth.signin.sub"]</p>
 
         <EditForm Model="_model" OnValidSubmit="SubmitAsync" FormName="login">
             <DataAnnotationsValidator />
@@ -29,34 +31,35 @@
             }
 
             <div class="field">
-                <label class="label" for="login-email">Email</label>
+                <label class="label" for="login-email">@T["auth.email"]</label>
                 <InputText id="login-email" class="input" @bind-Value="_model.Email"
                            autocomplete="email" aria-describedby="login-email-err" />
                 <ValidationMessage For="() => _model.Email" id="login-email-err" role="alert" />
             </div>
 
             <div class="field">
-                <label class="label" for="login-password">Password</label>
+                <label class="label" for="login-password">@T["auth.password"]</label>
                 <InputText id="login-password" type="password" class="input" @bind-Value="_model.Password"
                            autocomplete="current-password" aria-describedby="login-password-err" />
                 <ValidationMessage For="() => _model.Password" id="login-password-err" role="alert" />
-                <div class="forgot-row"><a href="/forgot-password">Forgot password?</a></div>
+                <div class="forgot-row"><a href="/forgot-password">@T["auth.forgot"]</a></div>
             </div>
 
             <button type="submit" class="btn-accent btn-lg w-full" disabled="@_busy">
-                @(_busy ? "Signing in…" : "Sign in →")
+                @(_busy ? T["auth.signin.busy"] : $"{T["auth.signin.button"]} →")
             </button>
         </EditForm>
 
         <p class="auth-foot">
-            New to cerdikMY? <a href="/register">Create an account</a>
+            @T["auth.signin.foot"] <a href="/register">@T["auth.create"]</a>
         </p>
     </div>
     <p class="auth-meta">🛡 Secure access &nbsp;·&nbsp; 🌐 KPM aligned</p>
 </div>
 
 <style>
-    .auth-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: linear-gradient(160deg, #eef5ff 0%, #f6f8fc 45%, #fff 100%); }
+    .auth-page { position: relative; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: linear-gradient(160deg, #eef5ff 0%, #f6f8fc 45%, #fff 100%); }
+    .auth-langbar { position: absolute; top: 1rem; right: 1rem; }
     .auth-brand-block { text-align: center; margin-bottom: 1.5rem; }
     .logo-mark-lg { width: 3.25rem; height: 3.25rem; border-radius: .9rem; }
     .logo-mark-lg svg { width: 1.8rem; height: 1.8rem; }

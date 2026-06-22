@@ -1,5 +1,6 @@
 @implements IDisposable
 @inject AuthStateService Auth
+@inject IUiText T
 
 <nav class="space-y-1" aria-label="Primary">
     @foreach (var item in VisibleItems())
@@ -7,7 +8,7 @@
         <NavLink class="nav-link" href="@item.Href"
                  Match="@(item.Href == "/" ? NavLinkMatch.All : NavLinkMatch.Prefix)">
             <span aria-hidden="true" class="nav-icon">@item.Icon</span>
-            <span>@item.Label</span>
+            <span>@T[item.LabelKey]</span>
         </NavLink>
     }
 </nav>

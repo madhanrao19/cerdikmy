@@ -1,0 +1,38 @@
+@inject IUiText T
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@* Language toggle (BM / EN / ZH / TA). Writes the culture cookie and reloads so the whole UI
+   re-renders in the chosen language. *@
+<div class="lang-switcher">
+    <span class="lang-globe" aria-hidden="true">🌐</span>
+    <label class="sr-only" for="lang-select">@T["app.language"]</label>
+    <select id="lang-select" class="lang-select" value="@T.Lang" @onchange="OnChange" aria-label="@T["app.language"]">
+        @foreach (var lang in UiText.Languages)
+        {
+            <option value="@lang.Code">@lang.Name</option>
+        }
+    </select>
+</div>
+
+<style>
+    .lang-switcher { display: inline-flex; align-items: center; gap: .3rem; }
+    .lang-globe { font-size: .95rem; }
+    .lang-select {
+        appearance: auto; border: 1px solid #d6deeb; border-radius: .55rem;
+        padding: .28rem .5rem; font-size: .82rem; font-weight: 600; color: #334155;
+        background: #fff; cursor: pointer; max-width: 9.5rem;
+    }
+    .lang-select:focus-visible { outline: 2px solid var(--brand-400); outline-offset: 1px; }
+</style>
+
+@code {
+    private async Task OnChange(ChangeEventArgs e)
+    {
+        var code = e.Value?.ToString() ?? "en";
+        var cookieValue = Microsoft.AspNetCore.Localization.CookieRequestCultureProvider.MakeCookieValue(
+            new Microsoft.AspNetCore.Localization.RequestCulture(code));
+        await JS.InvokeVoidAsync("cerdikSetCulture", cookieValue);
+        Nav.NavigateTo(Nav.Uri, forceLoad: true);
+    }
+}
