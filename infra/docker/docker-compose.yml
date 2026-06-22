@@ -135,6 +135,17 @@ services:
       JWT_AUDIENCE: "${JWT_AUDIENCE:-cerdikmy-clients}"
       JWT_ACCESS_TTL_MINUTES: "${JWT_ACCESS_TTL_MINUTES:-15}"
       JWT_REFRESH_TTL_DAYS: "${JWT_REFRESH_TTL_DAYS:-30}"
+      # --- Secret-safety gate ---
+      # Secure by default: with no .env the Production API refuses to boot on dev defaults.
+      # .env.example sets this to "true" for the local prod-parity stack.
+      ALLOW_DEV_DEFAULT_SECRETS: "${ALLOW_DEV_DEFAULT_SECRETS:-false}"
+      # --- Database init / seeding ---
+      SEED_ON_STARTUP: "${SEED_ON_STARTUP:-true}"
+      # Demo data is OFF in this Production stack unless explicitly enabled.
+      SEED_DEMO_DATA: "${SEED_DEMO_DATA:-false}"
+      BOOTSTRAP_ADMIN_EMAIL: "${BOOTSTRAP_ADMIN_EMAIL:-}"
+      BOOTSTRAP_ADMIN_PASSWORD: "${BOOTSTRAP_ADMIN_PASSWORD:-}"
+      BOOTSTRAP_ADMIN_NAME: "${BOOTSTRAP_ADMIN_NAME:-Platform Admin}"
       # --- Object storage (MinIO over the compose network) ---
       STORAGE_PROVIDER: "${STORAGE_PROVIDER:-s3}"
       S3_ENDPOINT: "${S3_ENDPOINT:-http://minio:9000}"

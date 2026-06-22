@@ -42,10 +42,27 @@ Wait for propagation (`dig +short cerdik.example.my`) before issuing certs.
 ```bash
 cd /opt/cerdikmy
 cp .env.example .env
-nano .env          # set real JWT_*, MSSQL/SA password, AI + payment keys
+
+# Generate strong random secrets (sa password, MinIO keys, JWT keys) into .env.
+# This also sets ALLOW_DEV_DEFAULT_SECRETS=false and SEED_DEMO_DATA=false.
+./scripts/generate-secrets.sh
+
+nano .env          # set AI + payment + SMTP keys, the app domain URLs, and your
+                   # first admin: BOOTSTRAP_ADMIN_EMAIL / BOOTSTRAP_ADMIN_PASSWORD
 chmod +x infra/hostinger/deploy.sh
 ./infra/hostinger/deploy.sh
 ```
+
+> **Secrets gate.** The API runs with `ASPNETCORE_ENVIRONMENT=Production` and
+> **refuses to start** if any built-in development default credential (JWT
+> secrets, the demo `sa` password, or `minioadmin`) is still in use, unless
+> `ALLOW_DEV_DEFAULT_SECRETS=true`. `generate-secrets.sh` clears that for you;
+> never set it to `true` on a real deployment.
+
+> **First admin.** With `SEED_DEMO_DATA=false`, no demo accounts (and no
+> well-known passwords) are created. Set `BOOTSTRAP_ADMIN_EMAIL` and
+> `BOOTSTRAP_ADMIN_PASSWORD` (≥ 8 chars) in `.env`; the API creates that admin on
+> first start and skips it if the account already exists.
 
 `deploy.sh` is idempotent: it pulls latest code, installs Docker + the Compose
 plugin if missing, builds/starts the stack, and runs EF migrations via
@@ -122,7 +139,34 @@ docker compose -f infra/docker/docker-compose.yml start mssql
 Restore is the reverse: `tar xzf ... -C /data` into a fresh volume before
 `up -d`. Keep at least one copy off the VPS.
 
-## 6. Updating
+## 6. Database schema & migrations
+
+On startup the API ensures the schema exists, choosing **one** of two strategies
+(`DbInitializer`):
+
+- **Migrations present** (any file under
+  `src/Cerdik.Infrastructure/Persistence/Migrations/`) → `Database.Migrate()` is
+  applied. This is the path you want in production: schema changes ship as
+  reviewable, ordered migrations and upgrades are incremental.
+- **No migrations committed** → `EnsureCreated()` builds the current schema in one
+  shot. Convenient for local/demo, but the database gets **no
+  `__EFMigrationsHistory`**, so you cannot later apply migrations to it cleanly.
+
+> ⚠️ **Generate the initial migration before your first production deploy.**
+> Run `./scripts/generate-initial-migration.sh` (needs the .NET 10 SDK) and commit
+> the result. Deploy *with* migrations from day one so every future upgrade is a
+> clean `--migrate`. If you already went live on an `EnsureCreated` database, adopt
+> migrations by baselining: generate the initial migration, then mark it as already
+> applied (insert its id into `__EFMigrationsHistory`, or use
+> `dotnet ef migrations add … && dotnet ef database update --connection … 0` on a
+> copy) so `Migrate()` won't try to recreate existing tables.
+
+Migrations are applied by `deploy.sh` via
+`docker compose run --rm api dotnet Cerdik.Api.dll --migrate` (a one-shot that
+initializes the DB and exits). Only the API performs schema work — the web and
+worker containers never do — so there is no startup race.
+
+## 7. Updating
 
 Re-run the deploy script to roll forward — it rebuilds changed images, recreates
 containers, and re-applies migrations:
