@@ -1,0 +1,155 @@
+@page "/admin/media"
+@inject ApiClient Api
+
+<PageTitle>Media — cerdikMY Admin</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Admin, UserRole.ContentAdmin })">
+        <h1 class="page-title">Media library</h1>
+        <p class="page-sub mb-6">Upload images, audio and video for use in lessons (max 25&nbsp;MB).</p>
+
+        <div class="card mb-6">
+            <label class="label" for="media-file">Choose a file</label>
+            <InputFile id="media-file" OnChange="OnFileSelected" disabled="@_uploading"
+                       accept="image/*,video/*,audio/*" />
+
+            <div class="field" style="margin-top: .85rem;">
+                <label class="label" for="media-alt">Alt text (accessibility)</label>
+                <input id="media-alt" class="input" @bind="_altText" placeholder="Describe the media for screen readers" />
+            </div>
+
+            @if (_uploading)
+            {
+                <p class="text-slate-500" style="margin-top:.5rem;" role="status">Uploading @_pendingName…</p>
+            }
+            @if (_error is not null)
+            {
+                <p class="text-rose-700" style="margin-top:.5rem;" role="alert">@_error</p>
+            }
+            @if (_justUploaded is not null && !_uploading)
+            {
+                <p class="text-emerald-700" style="margin-top:.5rem;" role="status">Uploaded @_justUploaded ✓</p>
+            }
+        </div>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading media…</p>
+        }
+        else if (_items.Count == 0)
+        {
+            <div class="card"><p>No media yet — upload your first file above.</p></div>
+        }
+        else
+        {
+            <div class="media-grid">
+                @foreach (var m in _items)
+                {
+                    <figure class="media-card">
+                        <div class="media-preview">
+                            @if (m.ContentType.StartsWith("image/"))
+                            {
+                                <img src="@m.Url" alt="@(m.AltText ?? "Lesson media")" loading="lazy" />
+                            }
+                            else if (m.ContentType.StartsWith("video/"))
+                            {
+                                <video src="@m.Url" controls preload="metadata"></video>
+                            }
+                            else if (m.ContentType.StartsWith("audio/"))
+                            {
+                                <audio src="@m.Url" controls preload="none"></audio>
+                            }
+                            else
+                            {
+                                <span class="media-file">📄</span>
+                            }
+                        </div>
+                        <figcaption class="media-cap">
+                            <span class="media-type">@m.ContentType</span>
+                            @if (!string.IsNullOrWhiteSpace(m.AltText))
+                            {
+                                <span class="media-alt">@m.AltText</span>
+                            }
+                        </figcaption>
+                    </figure>
+                }
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .media-card { margin: 0; background: #fff; border: 1px solid #e8edf6; border-radius: 1rem; overflow: hidden; }
+    .media-preview { aspect-ratio: 16 / 10; background: #f3f6fc; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; }
+    .media-preview audio { width: 92%; }
+    .media-file { font-size: 2rem; }
+    .media-cap { padding: .6rem .75rem; display: flex; flex-direction: column; gap: .2rem; }
+    .media-type { font-size: .68rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #94a3b8; }
+    .media-alt { font-size: .8rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .field { margin: 0; }
+</style>
+
+@code {
+    private const long MaxBytes = 25 * 1024 * 1024;
+
+    private IReadOnlyList<MediaAssetDto> _items = Array.Empty<MediaAssetDto>();
+    private string _altText = "";
+    private bool _loading = true;
+    private bool _uploading;
+    private string? _pendingName;
+    private string? _justUploaded;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try { _items = await Api.GetMediaAsync(); }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (Exception) { _error = "We couldn't load the media library. Please try again."; }
+        finally { _loading = false; }
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        _error = null;
+        _justUploaded = null;
+
+        if (file.Size > MaxBytes)
+        {
+            _error = "That file is larger than 25 MB.";
+            return;
+        }
+
+        _uploading = true;
+        _pendingName = file.Name;
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxBytes);
+            var asset = await Api.UploadMediaAsync(stream, file.Name, file.ContentType, _altText);
+            _justUploaded = file.Name;
+            _altText = "";
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "Upload failed. Please check the file type and try again.";
+        }
+        finally
+        {
+            _uploading = false;
+            _pendingName = null;
+        }
+    }
+}

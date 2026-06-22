@@ -150,6 +150,25 @@ public sealed class ApiClient
     public Task<IReadOnlyList<WebhookLogDto>> GetPaymentsAsync(CancellationToken ct = default)
         => GetAsync<IReadOnlyList<WebhookLogDto>>("/admin/payments", ct);
 
+    // --------------------------------------------------------------- Media
+    public Task<IReadOnlyList<MediaAssetDto>> GetMediaAsync(CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<MediaAssetDto>>("/admin/media", ct);
+
+    public async Task<MediaAssetDto> UploadMediaAsync(Stream content, string fileName, string contentType, string? altText, CancellationToken ct = default)
+    {
+        ApplyAuth();
+        using var form = new MultipartFormDataContent();
+        var fileContent = new StreamContent(content);
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        form.Add(fileContent, "file", fileName);
+        if (!string.IsNullOrWhiteSpace(altText))
+        {
+            form.Add(new StringContent(altText), "altText");
+        }
+        using var response = await _http.PostAsync("/admin/media", form, ct).ConfigureAwait(false);
+        return await ReadAsync<MediaAssetDto>(response, ct).ConfigureAwait(false);
+    }
+
     // ------------------------------------------------------------- Billing
     /// <summary>Available subscription plans for the billing plan cards.</summary>
     public Task<IReadOnlyList<BillingPlanDto>> GetBillingPlansAsync(CancellationToken ct = default)
