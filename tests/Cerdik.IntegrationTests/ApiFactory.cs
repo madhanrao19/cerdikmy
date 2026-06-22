@@ -56,6 +56,13 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
                 services.Remove(d);
             }
             services.AddSingleton<Cerdik.Application.Abstractions.IEmailSender>(Email);
+
+            // In-memory object storage so media/export endpoints work without S3/MinIO/Azure.
+            foreach (var d in services.Where(x => x.ServiceType == typeof(Cerdik.Application.Abstractions.IStorageService)).ToList())
+            {
+                services.Remove(d);
+            }
+            services.AddSingleton<Cerdik.Application.Abstractions.IStorageService, InMemoryStorageService>();
         });
     }
 

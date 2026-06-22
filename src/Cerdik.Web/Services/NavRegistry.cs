@@ -23,6 +23,7 @@ public static class NavRegistry
         new("/admin", "Analytics", "📊", [UserRole.Admin, UserRole.ContentAdmin]),
         new("/admin/users", "Users", "👥", [UserRole.Admin]),
         new("/admin/content", "Content", "📚", [UserRole.Admin, UserRole.ContentAdmin]),
+        new("/admin/media", "Media", "🖼️", [UserRole.Admin, UserRole.ContentAdmin]),
         new("/admin/curriculum", "Curriculum", "🧭", [UserRole.Admin, UserRole.ContentAdmin]),
         new("/admin/moderation", "Moderation", "🛡️", [UserRole.Admin, UserRole.SafetyReviewer]),
         new("/admin/payments", "Payments", "🧾", [UserRole.Admin]),
