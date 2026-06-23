@@ -249,7 +249,8 @@ public class LearningFlowTests
         var result = await resp.Content.ReadFromJsonAsync<PlacementResultDto>(TestJson.Options);
         result!.SubjectId.Should().Be(subjectId);
         result.PercentScore.Should().BeInRange(0, 100);
-        result.Answered.Should().BeGreaterThan(0);
+        result.Total.Should().Be(test.Questions.Count, "every assembled question is graded, not only answered ones");
+        result.Correct.Should().BeGreaterThan(0, "the known maths answers are correct");
     }
 
     [Fact]

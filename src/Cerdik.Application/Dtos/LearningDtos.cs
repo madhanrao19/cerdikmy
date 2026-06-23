@@ -79,7 +79,7 @@ public sealed record PlacementStandardScoreDto(string Code, string Strand, doubl
 
 public sealed record PlacementResultDto(
     Guid SubjectId,
-    int Answered,
+    int Total,
     int Correct,
     double PercentScore,
     MasteryBand RecommendedBand,
