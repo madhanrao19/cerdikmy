@@ -219,6 +219,55 @@ public sealed class StudentsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Spaced-repetition review queue: completed lessons that are "due" again, using a simple
+    /// band-based interval (stronger mastery → longer interval) over the last activity date.</summary>
+    [HttpGet("/students/{id:guid}/reviews")]
+    public async Task<ActionResult<IReadOnlyList<ReviewItemDto>>> Reviews(Guid id, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+
+        var records = await _db.ProgressRecords.AsNoTracking()
+            .Where(p => p.StudentId == id && p.Completed && p.LastActivityAt != null)
+            .Select(p => new { p.LessonId, p.MasteryScore, p.LastActivityAt })
+            .ToListAsync(ct);
+        if (records.Count == 0) return Ok(Array.Empty<ReviewItemDto>());
+
+        var lessonIds = records.Select(r => r.LessonId).ToList();
+        var lessons = await _db.Lessons.AsNoTracking()
+            .Where(l => lessonIds.Contains(l.Id))
+            .Select(l => new { l.Id, l.Title, SubjectName = l.SubjectVariant.Subject.Name })
+            .ToListAsync(ct);
+        var lessonById = lessons.ToDictionary(l => l.Id);
+
+        var now = DateTimeOffset.UtcNow;
+        var due = new List<(int Overdue, ReviewItemDto Dto)>();
+        foreach (var r in records)
+        {
+            if (!lessonById.TryGetValue(r.LessonId, out var lesson)) continue;
+            var band = MasteryMath.ToBand(r.MasteryScore);
+            var interval = ReviewIntervalDays(band);
+            var daysSince = (int)Math.Floor((now - r.LastActivityAt!.Value).TotalDays);
+            if (daysSince < interval) continue;
+
+            due.Add((daysSince - interval, new ReviewItemDto(
+                r.LessonId, lesson.Title, lesson.SubjectName, band, daysSince, interval)));
+        }
+
+        var result = due.OrderByDescending(x => x.Overdue).Take(10).Select(x => x.Dto).ToList();
+        return Ok(result);
+    }
+
+    /// <summary>Days before a completed lesson resurfaces for review — stronger mastery waits longer.</summary>
+    private static int ReviewIntervalDays(MasteryBand band) => band switch
+    {
+        MasteryBand.TP6 => 30,
+        MasteryBand.TP5 => 21,
+        MasteryBand.TP4 => 14,
+        MasteryBand.TP3 => 7,
+        MasteryBand.TP2 => 3,
+        _ => 1,
+    };
+
     /// <summary>Shared progress builder reused by the parent dashboard.</summary>
     internal static async Task<ProgressDto> BuildProgress(AppDbContext db, Guid studentId, string studentName, CancellationToken ct)
     {

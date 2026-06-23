@@ -252,6 +252,11 @@ public sealed class UiText : IUiText
         ["student.placement.retake"] = T("Take another", "Ambil yang lain", "再测一次", "மற்றொன்றை எடு"),
         ["student.badges.recent"] = T("Recent badges", "Lencana terbaru", "最近的徽章", "சமீபத்திய பதக்கங்கள்"),
 
+        // Student — spaced-repetition review
+        ["student.review.title"] = T("Due for review", "Perlu diulang kaji", "待复习", "மீள்பார்வைக்கு உரியது"),
+        ["student.review.sub"] = T("Refresh these to keep them strong.", "Segarkan semula untuk mengekalkannya.", "复习这些以巩固记忆。", "இவற்றை வலுவாக வைத்திருக்க புதுப்பிக்கவும்."),
+        ["student.review.due"] = T("Review", "Ulang kaji", "复习", "மீள்பார்வை"),
+
         // Student — adaptive recommendations
         ["student.recs.title"] = T("Recommended for you", "Disyorkan untuk anda", "为你推荐", "உங்களுக்கான பரிந்துரைகள்"),
         ["student.recs.reason.continue"] = T("Continue", "Sambung", "继续", "தொடர்க"),

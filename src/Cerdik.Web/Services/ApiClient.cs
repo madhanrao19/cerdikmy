@@ -113,6 +113,9 @@ public sealed class ApiClient
     public Task<StudentStreakDto> GetStreakAsync(Guid studentId, CancellationToken ct = default)
         => GetAsync<StudentStreakDto>($"/students/{studentId}/streak", ct);
 
+    public Task<IReadOnlyList<ReviewItemDto>> GetReviewsAsync(Guid studentId, CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<ReviewItemDto>>($"/students/{studentId}/reviews", ct);
+
     public Task<IReadOnlyList<LessonRecommendationDto>> GetRecommendationsAsync(Guid studentId, int limit = 6, CancellationToken ct = default)
         => GetAsync<IReadOnlyList<LessonRecommendationDto>>($"/students/{studentId}/recommendations?limit={limit}", ct);
 
