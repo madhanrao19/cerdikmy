@@ -175,6 +175,10 @@ if (!isTesting)
 
     // Recurring jobs.
     RecurringJob.AddOrUpdate<BackgroundJobs>("recompute-mastery", j => j.RecomputeMasteryAsync(), Cron.Daily(20));
+    // Email guardians about high-risk safety flags, every 15 minutes (idempotent per flag).
+    RecurringJob.AddOrUpdate<BackgroundJobs>("guardian-safety-alerts", j => j.NotifyGuardiansOfFlagsAsync(), "*/15 * * * *");
+    // Weekly family learning summary — Mondays at 08:00 (server time).
+    RecurringJob.AddOrUpdate<BackgroundJobs>("weekly-parent-digest", j => j.SendWeeklyParentDigestAsync(), Cron.Weekly(DayOfWeek.Monday, 8));
 }
 
 app.MapControllers();
