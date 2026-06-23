@@ -1,0 +1,119 @@
+@inject ApiClient Api
+@inject IUiText T
+
+@* Per-learning-standard mastery for one subject: shows which KPM standards a student has
+   mastered, which are developing, and which are untouched, with a remediation link. *@
+@if (_loading)
+{
+    <p class="text-slate-500" role="status">@T["student.standards.loading"]</p>
+}
+else if (_error is not null)
+{
+    <div class="card" role="alert">
+        <p class="text-rose-700">@_error</p>
+        <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
+    </div>
+}
+else if (_data is not null)
+{
+    @if (_data.Standards.Count == 0)
+    {
+        <p class="text-slate-500">@T["student.standards.empty"]</p>
+    }
+    else
+    {
+        @foreach (var strand in _data.Standards.GroupBy(s => s.Strand))
+        {
+            <div class="strand">
+                <h4 class="strand-title">@strand.Key</h4>
+                <ul class="std-list">
+                    @foreach (var s in strand)
+                    {
+                        <li class="std-item">
+                            <div class="std-head">
+                                <span class="std-code">@s.Code</span>
+                                <span class="std-pill std-@(s.Status.ToString().ToLowerInvariant())">@StatusLabel(s.Status)</span>
+                            </div>
+                            <p class="std-desc">@s.Description</p>
+                            <div class="std-bar" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@((int)s.Mastery)">
+                                <span style="width:@((int)s.Mastery)%"></span>
+                            </div>
+                            <div class="std-meta">
+                                <span>@s.Band · @string.Format(T["student.standards.target"], s.TargetBand)</span>
+                                @if (s.NextLessonId is { } lessonId && s.Status != StandardMasteryStatus.Mastered)
+                                {
+                                    <a class="std-practise" href="@($"/student/lesson/{lessonId}")">@T["student.standards.practise"] →</a>
+                                }
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    }
+}
+
+<style>
+    .strand { margin-bottom: 1.25rem; }
+    .strand-title { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #64748b; margin-bottom: .5rem; }
+    .std-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .75rem; }
+    .std-item { border: 1px solid #f1f5f9; border-radius: .6rem; padding: .75rem .85rem; }
+    .std-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+    .std-code { font-weight: 700; color: #1e293b; font-size: .85rem; }
+    .std-pill { font-size: .68rem; font-weight: 700; border-radius: 9999px; padding: .1rem .5rem; }
+    .std-mastered { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .std-developing { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+    .std-notstarted { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+    .std-desc { font-size: .82rem; color: #475569; margin: .35rem 0; }
+    .std-bar { background: #e2e8f0; border-radius: 9999px; height: .45rem; overflow: hidden; margin: .3rem 0; }
+    .std-bar span { display: block; height: 100%; background: var(--brand-500); border-radius: 9999px; }
+    .std-meta { display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-size: .76rem; color: #64748b; }
+    .std-practise { font-weight: 700; color: var(--brand-600); }
+</style>
+
+@code {
+    [Parameter] public Guid StudentId { get; set; }
+    [Parameter] public Guid SubjectId { get; set; }
+
+    private SubjectStandardsMasteryDto? _data;
+    private bool _loading = true;
+    private string? _error;
+    private Guid _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Only (re)load when the target student/subject actually changes.
+        if (_loadedFor == SubjectId && _data is not null) return;
+        _loadedFor = SubjectId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _data = await Api.GetStandardsMasteryAsync(StudentId, SubjectId);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = T["student.standards.error"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private string StatusLabel(StandardMasteryStatus status) => status switch
+    {
+        StandardMasteryStatus.Mastered => T["student.standards.mastered"],
+        StandardMasteryStatus.Developing => T["student.standards.developing"],
+        _ => T["student.standards.not_started"],
+    };
+}

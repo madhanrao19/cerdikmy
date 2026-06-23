@@ -59,6 +59,20 @@
                                         <span style="width:@MasteryPct(s.MasteryScore)%"></span>
                                     </div>
                                     <p class="sp-meta">@s.LessonsCompleted / @s.TotalLessons @T["common.lessons"] · @MasteryPct(s.MasteryScore)%</p>
+                                    @if (_studentId is { } sid)
+                                    {
+                                        <button type="button" class="sp-toggle no-print"
+                                                @onclick="() => ToggleStandards(s.SubjectId)"
+                                                aria-expanded="@(_openSubject == s.SubjectId)">
+                                            @(_openSubject == s.SubjectId ? T["student.standards.hide"] : T["student.standards.view"])
+                                        </button>
+                                        @if (_openSubject == s.SubjectId)
+                                        {
+                                            <div class="sp-standards">
+                                                <StandardsMasteryPanel StudentId="sid" SubjectId="s.SubjectId" />
+                                            </div>
+                                        }
+                                    }
                                 </li>
                             }
                         </ul>
@@ -108,6 +122,9 @@
     .sp-bar { background: #e2e8f0; border-radius: 9999px; height: .55rem; overflow: hidden; margin: .35rem 0; }
     .sp-bar span { display: block; height: 100%; background: var(--brand-500); border-radius: 9999px; }
     .sp-meta { font-size: .78rem; color: #64748b; }
+    .sp-toggle { margin-top: .4rem; background: transparent; border: 0; padding: 0; font-size: .78rem; font-weight: 700; color: var(--brand-600); cursor: pointer; }
+    .sp-toggle:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+    .sp-standards { margin-top: .75rem; padding-top: .75rem; border-top: 1px solid #f1f5f9; }
     .home-side { display: flex; flex-direction: column; gap: 1.5rem; }
     .badge-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: .6rem; }
     .badge-grid li { display: flex; flex-direction: column; align-items: center; text-align: center; gap: .25rem; padding: .6rem; border: 1px solid #f1f5f9; border-radius: .5rem; }
@@ -118,8 +135,13 @@
 
 @code {
     private ProgressDto? _progress;
+    private Guid? _studentId;
+    private Guid? _openSubject;
     private bool _loading = true;
     private string? _error;
+
+    private void ToggleStandards(Guid subjectId) =>
+        _openSubject = _openSubject == subjectId ? null : subjectId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -142,6 +164,7 @@
                 _error = T["common.no_student"];
                 return;
             }
+            _studentId = studentId.Value;
             _progress = await Api.GetStudentProgressAsync(studentId.Value);
         }
         catch (ApiException ex)

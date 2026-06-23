@@ -31,6 +31,67 @@ public sealed class StudentsController : ControllerBase
         return Ok(await BuildProgress(_db, id, student.DisplayName, ct));
     }
 
+    /// <summary>Per-learning-standard mastery for a subject: which KPM standards the student has
+    /// mastered, which are still developing, and which are untouched — with a remediation link.</summary>
+    [HttpGet("/students/{id:guid}/subjects/{subjectId:guid}/standards-mastery")]
+    public async Task<ActionResult<SubjectStandardsMasteryDto>> StandardsMastery(Guid id, Guid subjectId, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+        var subject = await _db.Subjects.AsNoTracking().FirstOrDefaultAsync(s => s.Id == subjectId, ct)
+            ?? throw ApiException.NotFound("Subject");
+
+        var standards = await _db.LearningStandards.AsNoTracking()
+            .Where(s => s.SubjectId == subjectId)
+            .OrderBy(s => s.SortOrder).ThenBy(s => s.Code)
+            .ToListAsync(ct);
+
+        // Published lessons for this subject that are mapped to a standard.
+        var lessons = await _db.Lessons.AsNoTracking()
+            .Where(l => l.SubjectVariant.SubjectId == subjectId
+                        && l.LearningStandardId != null
+                        && l.State == PublishState.Published)
+            .Select(l => new { l.Id, l.LearningStandardId, l.SortOrder })
+            .ToListAsync(ct);
+
+        var records = await _db.ProgressRecords.AsNoTracking()
+            .Where(p => p.StudentId == id)
+            .Select(p => new { p.LessonId, p.MasteryScore, p.Completed })
+            .ToListAsync(ct);
+        var recordByLesson = records
+            .GroupBy(r => r.LessonId)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var result = new List<StandardMasteryDto>(standards.Count);
+        foreach (var std in standards)
+        {
+            var stdLessons = lessons.Where(l => l.LearningStandardId == std.Id)
+                .OrderBy(l => l.SortOrder).ToList();
+            var touched = stdLessons
+                .Where(l => recordByLesson.ContainsKey(l.Id))
+                .Select(l => recordByLesson[l.Id])
+                .ToList();
+
+            var mastery = touched.Count > 0 ? Math.Round(touched.Average(r => r.MasteryScore), 1) : 0;
+            var band = MasteryMath.ToBand(mastery);
+            var completed = touched.Count(r => r.Completed);
+
+            var status = touched.Count == 0
+                ? StandardMasteryStatus.NotStarted
+                : (int)band >= (int)std.TargetBand ? StandardMasteryStatus.Mastered
+                : StandardMasteryStatus.Developing;
+
+            // Remediation link: first lesson not yet completed (else the first lesson).
+            var nextLesson = stdLessons.FirstOrDefault(l =>
+                !recordByLesson.TryGetValue(l.Id, out var r) || !r.Completed) ?? stdLessons.FirstOrDefault();
+
+            result.Add(new StandardMasteryDto(
+                std.Id, std.Code, std.Strand, std.Description, std.TargetBand,
+                mastery, band, completed, stdLessons.Count, status, nextLesson?.Id));
+        }
+
+        return Ok(new SubjectStandardsMasteryDto(subjectId, subject.Name, result));
+    }
+
     /// <summary>Shared progress builder reused by the parent dashboard.</summary>
     internal static async Task<ProgressDto> BuildProgress(AppDbContext db, Guid studentId, string studentName, CancellationToken ct)
     {
