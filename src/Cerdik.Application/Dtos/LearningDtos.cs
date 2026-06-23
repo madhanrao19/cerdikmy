@@ -85,6 +85,15 @@ public sealed record PlacementResultDto(
     MasteryBand RecommendedBand,
     IReadOnlyList<PlacementStandardScoreDto> Standards);
 
+// ---- Spaced-repetition review ----
+public sealed record ReviewItemDto(
+    Guid LessonId,
+    string LessonTitle,
+    string SubjectName,
+    MasteryBand Band,
+    int DaysSinceReview,
+    int IntervalDays);
+
 // ---- Mock exam ----
 public sealed record ExamQuestionDto(string Key, string Prompt, QuestionType Type, IReadOnlyList<string> Options);
 

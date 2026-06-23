@@ -86,6 +86,28 @@
                 </div>
             </section>
 
+            @if (_reviews.Count > 0)
+            {
+                <section class="card recs-card" aria-labelledby="review-h">
+                    <h2 id="review-h" class="card-title">@T["student.review.title"]</h2>
+                    <p class="text-slate-600 mb-4">@T["student.review.sub"]</p>
+                    <ul class="recs-list">
+                        @foreach (var r in _reviews)
+                        {
+                            <li>
+                                <a class="rec-row" href="@($"/student/lesson/{r.LessonId}")">
+                                    <span class="rec-main">
+                                        <span class="rec-title">@r.LessonTitle</span>
+                                        <span class="rec-sub">@r.SubjectName · @r.Band</span>
+                                    </span>
+                                    <span class="rec-chip rec-review">@T["student.review.due"]</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+
             @if (_recs.Count > 0)
             {
                 <section class="card recs-card" aria-labelledby="recs-h">
@@ -221,6 +243,7 @@
     private ProgressDto? _progress;
     private StudentStreakDto? _streak;
     private IReadOnlyList<LessonRecommendationDto> _recs = Array.Empty<LessonRecommendationDto>();
+    private IReadOnlyList<ReviewItemDto> _reviews = Array.Empty<ReviewItemDto>();
     private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
     private Language _language = Language.BM;
     private bool _loading = true;
@@ -253,6 +276,7 @@
             _progress = await Api.GetStudentProgressAsync(studentId.Value);
             _streak = await Api.GetStreakAsync(studentId.Value);
             _recs = await Api.GetRecommendationsAsync(studentId.Value);
+            _reviews = await Api.GetReviewsAsync(studentId.Value);
 
             var filter = _student is null
                 ? new CurriculumFilter()

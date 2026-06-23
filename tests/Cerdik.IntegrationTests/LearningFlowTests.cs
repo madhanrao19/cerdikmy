@@ -298,6 +298,33 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Reviews_surface_completed_lessons_that_are_due()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid studentId, lessonId;
+        using (var db = _factory.NewDbContext())
+        {
+            studentId = (await db.Students.FirstAsync(s => s.DisplayName == "Wei Han")).Id;
+            lessonId = await db.Lessons.Select(l => l.Id).FirstAsync();
+            db.ProgressRecords.Add(new Cerdik.Domain.Entities.ProgressRecord
+            {
+                StudentId = studentId,
+                LessonId = lessonId,
+                Completed = true,
+                CompletedAt = DateTimeOffset.UtcNow.AddDays(-60),
+                MasteryScore = 80, // TP5 -> 21-day interval; 60 days elapsed => due
+                LastActivityAt = DateTimeOffset.UtcNow.AddDays(-60),
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var reviews = await client.GetFromJsonAsync<List<ReviewItemDto>>(
+            $"/students/{studentId}/reviews", TestJson.Options);
+        reviews!.Should().Contain(r => r.LessonId == lessonId);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();
