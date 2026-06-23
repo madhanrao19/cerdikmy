@@ -161,6 +161,41 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Streak_reflects_activity_done_today()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid studentId;
+        using (var db = _factory.NewDbContext())
+        {
+            var student = await db.Students.FirstAsync(s => s.DisplayName == "Aisyah");
+            studentId = student.Id;
+            var activityId = await db.Activities.Select(a => a.Id).FirstAsync();
+            db.Attempts.Add(new Cerdik.Domain.Entities.Attempt
+            {
+                StudentId = studentId,
+                ActivityId = activityId,
+                Status = AttemptStatus.Graded,
+                SubmittedAt = DateTimeOffset.UtcNow,
+                Score = 1,
+                MaxScore = 1,
+                PercentScore = 100,
+                Passed = true,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var resp = await client.GetAsync($"/students/{studentId}/streak");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var streak = await resp.Content.ReadFromJsonAsync<StudentStreakDto>(TestJson.Options);
+        streak!.ActiveToday.Should().BeTrue();
+        streak.CurrentStreak.Should().BeGreaterThanOrEqualTo(1);
+        streak.TodayMinutes.Should().BeGreaterThanOrEqualTo(5);
+        streak.GoalMinutes.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();

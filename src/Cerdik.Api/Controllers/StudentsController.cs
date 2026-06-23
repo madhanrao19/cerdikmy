@@ -92,6 +92,55 @@ public sealed class StudentsController : ControllerBase
         return Ok(new SubjectStandardsMasteryDto(subjectId, subject.Name, result));
     }
 
+    /// <summary>Daily learning streak and today's goal progress, computed from attempt/lesson activity
+    /// (UTC day boundaries) and the student's active study-plan target.</summary>
+    [HttpGet("/students/{id:guid}/streak")]
+    public async Task<ActionResult<StudentStreakDto>> Streak(Guid id, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+
+        var since = DateTimeOffset.UtcNow.AddDays(-400);
+        var attemptTimes = await _db.Attempts.AsNoTracking()
+            .Where(a => a.StudentId == id && a.SubmittedAt >= since)
+            .Select(a => a.SubmittedAt!.Value).ToListAsync(ct);
+        var lessonTimes = await _db.ProgressRecords.AsNoTracking()
+            .Where(p => p.StudentId == id && p.CompletedAt >= since)
+            .Select(p => p.CompletedAt!.Value).ToListAsync(ct);
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var days = attemptTimes.Concat(lessonTimes)
+            .Select(t => DateOnly.FromDateTime(t.UtcDateTime))
+            .Distinct().OrderBy(d => d).ToList();
+        var set = days.ToHashSet();
+
+        // Current streak: walk back from today (or yesterday, so a streak stays "alive" until midnight).
+        var current = 0;
+        DateOnly? cursor = set.Contains(today) ? today
+            : set.Contains(today.AddDays(-1)) ? today.AddDays(-1) : null;
+        while (cursor is { } c && set.Contains(c)) { current++; cursor = c.AddDays(-1); }
+
+        // Longest streak across the window.
+        var longest = 0;
+        var run = 0;
+        DateOnly? prev = null;
+        foreach (var d in days)
+        {
+            run = prev is { } p && d == p.AddDays(1) ? run + 1 : 1;
+            longest = Math.Max(longest, run);
+            prev = d;
+        }
+
+        var todayMinutes = attemptTimes.Count(t => DateOnly.FromDateTime(t.UtcDateTime) == today) * 5;
+        var goal = await _db.StudyPlans.AsNoTracking()
+            .Where(p => p.StudentId == id && p.IsActive)
+            .Select(p => (int?)p.TargetMinutesPerDay).FirstOrDefaultAsync(ct) ?? 20;
+
+        var recent = days.Where(d => d >= today.AddDays(-13)).ToList();
+
+        return Ok(new StudentStreakDto(
+            current, longest, set.Contains(today), todayMinutes, goal, todayMinutes >= goal, recent));
+    }
+
     /// <summary>Shared progress builder reused by the parent dashboard.</summary>
     internal static async Task<ProgressDto> BuildProgress(AppDbContext db, Guid studentId, string studentName, CancellationToken ct)
     {
