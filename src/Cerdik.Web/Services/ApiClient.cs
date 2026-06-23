@@ -113,6 +113,9 @@ public sealed class ApiClient
     public Task<StudentStreakDto> GetStreakAsync(Guid studentId, CancellationToken ct = default)
         => GetAsync<StudentStreakDto>($"/students/{studentId}/streak", ct);
 
+    public Task<IReadOnlyList<LessonRecommendationDto>> GetRecommendationsAsync(Guid studentId, int limit = 6, CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<LessonRecommendationDto>>($"/students/{studentId}/recommendations?limit={limit}", ct);
+
     // -------------------------------------------------------------- Parent
     public Task<ParentDashboardDto> GetParentDashboardAsync(CancellationToken ct = default)
         => GetAsync<ParentDashboardDto>("/parents/dashboard", ct);
