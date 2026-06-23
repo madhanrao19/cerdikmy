@@ -68,6 +68,16 @@ public sealed record SubjectStandardsMasteryDto(
 
 public sealed record BadgeDto(string Code, string Name, string? Icon, DateTimeOffset AwardedAt);
 
+// ---- Streak & daily goal ----
+public sealed record StudentStreakDto(
+    int CurrentStreak,
+    int LongestStreak,
+    bool ActiveToday,
+    int TodayMinutes,
+    int GoalMinutes,
+    bool GoalMet,
+    IReadOnlyList<DateOnly> ActiveDays);
+
 // ---- Parent dashboard ----
 public sealed record ParentDashboardDto(
     Guid HouseholdId,

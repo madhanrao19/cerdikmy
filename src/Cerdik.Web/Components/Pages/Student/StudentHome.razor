@@ -38,6 +38,35 @@
         }
         else
         {
+            @if (_streak is not null)
+            {
+                <section class="streak-card" aria-label="Streak and daily goal">
+                    <div class="streak-flame">
+                        <span class="flame-emoji" aria-hidden="true">@(_streak.CurrentStreak > 0 ? "🔥" : "✨")</span>
+                        <span class="streak-text">
+                            @(_streak.CurrentStreak > 0 ? string.Format(T["student.streak.days"], _streak.CurrentStreak) : T["student.streak.start"])
+                        </span>
+                        @if (_streak.LongestStreak > 1)
+                        {
+                            <span class="streak-best">@string.Format(T["student.streak.best"], _streak.LongestStreak)</span>
+                        }
+                    </div>
+                    <div class="streak-goal">
+                        @if (_streak.GoalMet)
+                        {
+                            <span class="goal-done">@T["student.streak.goal_met"]</span>
+                        }
+                        else
+                        {
+                            <span class="goal-text">@string.Format(T["student.streak.goal_progress"], _streak.TodayMinutes, _streak.GoalMinutes)</span>
+                        }
+                        <div class="goal-bar" role="meter" aria-valuemin="0" aria-valuemax="@_streak.GoalMinutes" aria-valuenow="@_streak.TodayMinutes">
+                            <span style="width:@(GoalPct(_streak))%"></span>
+                        </div>
+                    </div>
+                </section>
+            }
+
             <section class="quick-stats" aria-label="Your progress">
                 <div class="qstat">
                     <span class="qstat-label">@T["student.stat.points"]</span>
@@ -139,6 +168,16 @@
     .home-side { display: flex; flex-direction: column; gap: 1.5rem; }
     .badge-list li { display: flex; align-items: center; gap: .5rem; font-size: .9rem; }
     .w-full { width: 100%; }
+    .streak-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; background: linear-gradient(120deg, #fff7ed, #fff); border: 1px solid #fed7aa; border-radius: .9rem; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+    .streak-flame { display: flex; align-items: center; gap: .6rem; }
+    .flame-emoji { font-size: 1.8rem; line-height: 1; }
+    .streak-text { font-size: 1.1rem; font-weight: 800; color: #9a3412; }
+    .streak-best { font-size: .75rem; font-weight: 600; color: #c2640a; background: #ffedd5; border-radius: 9999px; padding: .15rem .55rem; }
+    .streak-goal { min-width: 12rem; flex: 1 1 12rem; }
+    .goal-text, .goal-done { display: block; font-size: .8rem; font-weight: 700; color: #475569; margin-bottom: .3rem; }
+    .goal-done { color: #15803d; }
+    .goal-bar { background: #fde6cf; border-radius: 9999px; height: .5rem; overflow: hidden; }
+    .goal-bar span { display: block; height: 100%; background: #f97316; border-radius: 9999px; }
     @@media (min-width: 640px) { .quick-stats { grid-template-columns: repeat(4, 1fr); } }
     @@media (min-width: 1024px) { .home-grid { grid-template-columns: 2fr 1fr; } }
 </style>
@@ -146,6 +185,7 @@
 @code {
     private StudentSummaryDto? _student;
     private ProgressDto? _progress;
+    private StudentStreakDto? _streak;
     private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
     private Language _language = Language.BM;
     private bool _loading = true;
@@ -176,6 +216,7 @@
             }
 
             _progress = await Api.GetStudentProgressAsync(studentId.Value);
+            _streak = await Api.GetStreakAsync(studentId.Value);
 
             var filter = _student is null
                 ? new CurriculumFilter()
@@ -220,6 +261,9 @@
     }
 
     private static int MasteryPct(double v) => (int)Math.Round(v * (v <= 1 ? 100 : 1));
+
+    private static int GoalPct(StudentStreakDto s) =>
+        s.GoalMinutes <= 0 ? 100 : Math.Min(100, (int)Math.Round(100.0 * s.TodayMinutes / s.GoalMinutes));
 
     public void Dispose() => Current.OnChange -= OnStudentChanged;
 }

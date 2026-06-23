@@ -162,6 +162,13 @@ public sealed class UiText : IUiText
         ["student.cta.progress"] = T("📈 See my progress", "📈 Lihat kemajuan saya", "📈 查看我的进度", "📈 எனது முன்னேற்றத்தைக் காண்க"),
         ["student.badges.recent"] = T("Recent badges", "Lencana terbaru", "最近的徽章", "சமீபத்திய பதக்கங்கள்"),
 
+        // Student — streak & daily goal
+        ["student.streak.days"] = T("{0}-day streak", "{0} hari berturut", "连续 {0} 天", "{0} நாள் தொடர்"),
+        ["student.streak.start"] = T("Start your streak today!", "Mulakan rentetan anda hari ini!", "今天开始你的连胜吧！", "இன்று உங்கள் தொடரைத் தொடங்குங்கள்!"),
+        ["student.streak.best"] = T("Best: {0} days", "Terbaik: {0} hari", "最佳：{0} 天", "சிறந்தது: {0} நாட்கள்"),
+        ["student.streak.goal_met"] = T("Today's goal done! 🎉", "Matlamat hari ini selesai! 🎉", "今日目标已完成！🎉", "இன்றைய இலக்கு முடிந்தது! 🎉"),
+        ["student.streak.goal_progress"] = T("{0} / {1} min today", "{0} / {1} min hari ini", "今日 {0} / {1} 分钟", "இன்று {0} / {1} நிமிடம்"),
+
         // Student — progress
         ["student.progress.title"] = T("My progress", "Kemajuan saya", "我的进度", "எனது முன்னேற்றம்"),
         ["student.progress.sub"] = T(
