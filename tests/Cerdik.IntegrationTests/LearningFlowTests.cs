@@ -216,6 +216,43 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Placement_quiz_assembles_questions_and_grades()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid studentId, subjectId;
+        using (var db = _factory.NewDbContext())
+        {
+            studentId = (await db.Students.FirstAsync(s => s.DisplayName == "Aisyah")).Id;
+            var maths = await db.Activities.Include(a => a.Lesson)
+                .FirstAsync(a => a.QuestionsJson.Contains("\"m1\""));
+            subjectId = await db.SubjectVariants.Where(v => v.Id == maths.Lesson.SubjectVariantId)
+                .Select(v => v.SubjectId).FirstAsync();
+        }
+
+        var test = await client.GetFromJsonAsync<PlacementTestDto>(
+            $"/students/{studentId}/subjects/{subjectId}/placement", TestJson.Options);
+        test!.SubjectId.Should().Be(subjectId);
+        test.Questions.Should().NotBeEmpty();
+        test.Questions.Should().OnlyContain(q => q.Key.Contains('|'));
+
+        // Answer the known seeded maths questions correctly (m1=7, m2=7).
+        var known = new Dictionary<string, string> { ["m1"] = "7", ["m2"] = "7", ["m3"] = "Palsu" };
+        var answers = test.Questions
+            .Where(q => known.ContainsKey(q.Key.Split('|')[1]))
+            .ToDictionary(q => q.Key, q => known[q.Key.Split('|')[1]]);
+
+        var resp = await client.PostAsJsonAsync(
+            $"/students/{studentId}/subjects/{subjectId}/placement", new PlacementSubmitRequest(answers));
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var result = await resp.Content.ReadFromJsonAsync<PlacementResultDto>(TestJson.Options);
+        result!.SubjectId.Should().Be(subjectId);
+        result.PercentScore.Should().BeInRange(0, 100);
+        result.Answered.Should().BeGreaterThan(0);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();
