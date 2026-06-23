@@ -1,59 +1,70 @@
 @page "/parent/report/{StudentId:guid}"
 @inject ApiClient Api
 @inject IJSRuntime JS
+@inject IUiText T
 
-<PageTitle>Progress report — cerdikMY</PageTitle>
+<PageTitle>@T["report.title"] — cerdikMY</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Parent })">
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading report…</p>
+            <p class="text-slate-500" role="status">@T["report.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else if (_progress is not null)
         {
             <div class="report-toolbar no-print">
-                <a class="btn-secondary" href="/parent">Back to dashboard</a>
-                <button class="btn-primary" @onclick="PrintAsync">🖨️ Print report</button>
+                <a class="btn-secondary" href="/parent">@T["report.back"]</a>
+                <button class="btn-primary" @onclick="PrintAsync">@T["report.print"]</button>
             </div>
 
             <article class="report" id="printable-report">
                 <header class="report-head">
                     <div>
-                        <p class="report-brand">cerdik<span class="brand-accent">MY</span> · Progress report</p>
+                        <p class="report-brand">cerdik<span class="brand-accent">MY</span> · @T["report.title"]</p>
                         <h1 class="report-name">@_progress.StudentName</h1>
-                        <p class="report-date">Generated @DateTime.Now.ToString("d MMMM yyyy")</p>
+                        <p class="report-date">@string.Format(T["report.generated"], DateTime.Now.ToString("d MMMM yyyy"))</p>
                     </div>
                     <MasteryBadge Band="_progress.OverallBand" />
                 </header>
 
                 <section class="report-summary" aria-label="Summary">
                     <div class="summary-tile">
-                        <span class="summary-label">Overall mastery</span>
+                        <span class="summary-label">@T["report.overall_mastery"]</span>
                         <span class="summary-value">@MasteryPct(_progress.OverallMastery)%</span>
                     </div>
                     <div class="summary-tile">
-                        <span class="summary-label">Lessons completed</span>
+                        <span class="summary-label">@T["report.lessons_completed"]</span>
                         <span class="summary-value">@_progress.LessonsCompleted / @_progress.TotalLessons</span>
                     </div>
                     <div class="summary-tile">
-                        <span class="summary-label">Badges earned</span>
+                        <span class="summary-label">@T["report.badges_earned"]</span>
                         <span class="summary-value">@_progress.Badges.Count</span>
                     </div>
+                    @if (_streak is not null)
+                    {
+                        <div class="summary-tile">
+                            <span class="summary-label">@T["report.streak"]</span>
+                            <span class="summary-value">@string.Format(T["report.streak_days"], _streak.CurrentStreak)</span>
+                        </div>
+                    }
                 </section>
 
                 <section aria-labelledby="report-subjects-h">
-                    <h2 id="report-subjects-h" class="report-section-title">Subject mastery</h2>
+                    <h2 id="report-subjects-h" class="report-section-title">@T["report.subject_mastery"]</h2>
                     <table class="report-table">
                         <thead>
-                            <tr><th>Subject</th><th>Mastery</th><th>Band</th><th>Lessons</th><th>Last active</th></tr>
+                            <tr>
+                                <th>@T["report.col.subject"]</th><th>@T["report.col.mastery"]</th>
+                                <th>@T["report.col.band"]</th><th>@T["report.col.lessons"]</th><th>@T["report.col.last_active"]</th>
+                            </tr>
                         </thead>
                         <tbody>
                             @foreach (var s in _progress.Subjects)
@@ -70,15 +81,45 @@
                     </table>
                 </section>
 
+                <section aria-labelledby="report-exams-h">
+                    <h2 id="report-exams-h" class="report-section-title">@T["report.exams"]</h2>
+                    @if (_exams.Count == 0)
+                    {
+                        <p class="text-slate-500">@T["report.no_exams"]</p>
+                    }
+                    else
+                    {
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>@T["report.col.date"]</th><th>@T["report.col.subject"]</th>
+                                    <th>@T["report.col.score"]</th><th>@T["report.col.grade"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var e in _exams.Take(10))
+                                {
+                                    <tr>
+                                        <td>@e.TakenAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                        <td>@e.SubjectName</td>
+                                        <td>@e.PercentScore%</td>
+                                        <td><strong>@e.Grade</strong></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </section>
+
                 <section aria-labelledby="report-activity-h">
-                    <h2 id="report-activity-h" class="report-section-title">Activity (last 12 weeks)</h2>
+                    <h2 id="report-activity-h" class="report-section-title">@T["report.activity"]</h2>
                     <ProgressHeatmap Cells="_progress.Heatmap" />
                 </section>
 
                 @if (_progress.Badges.Count > 0)
                 {
                     <section aria-labelledby="report-badges-h">
-                        <h2 id="report-badges-h" class="report-section-title">Badges</h2>
+                        <h2 id="report-badges-h" class="report-section-title">@T["report.badges"]</h2>
                         <ul class="report-badges">
                             @foreach (var b in _progress.Badges)
                             {
@@ -103,7 +144,7 @@
     .report-brand { font-weight: 700; color: var(--brand-700); }
     .report-name { font-size: 1.75rem; font-weight: 800; color: #0f172a; }
     .report-date { color: #64748b; font-size: .85rem; }
-    .report-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+    .report-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 1rem; margin: 1.5rem 0; }
     .summary-tile { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: .6rem; padding: 1rem; }
     .summary-label { display: block; font-size: .75rem; color: #64748b; }
     .summary-value { font-size: 1.5rem; font-weight: 800; color: #0f172a; }
@@ -125,6 +166,8 @@
     [Parameter] public Guid StudentId { get; set; }
 
     private ProgressDto? _progress;
+    private StudentStreakDto? _streak;
+    private IReadOnlyList<ExamHistoryItemDto> _exams = Array.Empty<ExamHistoryItemDto>();
     private bool _loading = true;
     private string? _error;
 
@@ -137,14 +180,16 @@
         try
         {
             _progress = await Api.GetStudentProgressAsync(StudentId);
+            _streak = await Api.GetStreakAsync(StudentId);
+            _exams = await Api.GetExamHistoryAsync(StudentId);
         }
         catch (ApiException ex)
         {
-            _error = ex.IsNotFound ? "We couldn't find a report for this student." : ex.Message;
+            _error = ex.IsNotFound ? T["report.not_found"] : ex.Message;
         }
         catch (Exception)
         {
-            _error = "We couldn't load this report. Please try again.";
+            _error = T["report.error"];
         }
         finally
         {

@@ -95,6 +95,41 @@ public sealed class UiText : IUiText
             "您的账户未关联学生档案。",
             "உங்கள் கணக்குடன் மாணவர் சுயவிவரம் இணைக்கப்படவில்லை."),
 
+        // Parent — printable progress report
+        ["report.title"] = T("Progress report", "Laporan kemajuan", "进度报告", "முன்னேற்ற அறிக்கை"),
+        ["report.loading"] = T("Loading report…", "Memuatkan laporan…", "正在加载报告…", "அறிக்கையை ஏற்றுகிறது…"),
+        ["report.back"] = T("Back to dashboard", "Kembali ke papan pemuka", "返回仪表板", "டாஷ்போர்டுக்குத் திரும்பு"),
+        ["report.print"] = T("🖨️ Print report", "🖨️ Cetak laporan", "🖨️ 打印报告", "🖨️ அறிக்கையை அச்சிடு"),
+        ["report.generated"] = T("Generated {0}", "Dijana {0}", "生成于 {0}", "உருவாக்கப்பட்டது {0}"),
+        ["report.overall_mastery"] = T("Overall mastery", "Penguasaan keseluruhan", "总体掌握度", "மொத்த தேர்ச்சி"),
+        ["report.lessons_completed"] = T("Lessons completed", "Pelajaran selesai", "已完成课程", "முடிக்கப்பட்ட பாடங்கள்"),
+        ["report.badges_earned"] = T("Badges earned", "Lencana diperoleh", "获得徽章", "பெற்ற பதக்கங்கள்"),
+        ["report.streak"] = T("Current streak", "Rentetan semasa", "当前连胜", "தற்போதைய தொடர்"),
+        ["report.streak_days"] = T("{0} days", "{0} hari", "{0} 天", "{0} நாட்கள்"),
+        ["report.subject_mastery"] = T("Subject mastery", "Penguasaan subjek", "科目掌握度", "பாடத் தேர்ச்சி"),
+        ["report.col.subject"] = T("Subject", "Subjek", "科目", "பாடம்"),
+        ["report.col.mastery"] = T("Mastery", "Penguasaan", "掌握度", "தேர்ச்சி"),
+        ["report.col.band"] = T("Band", "Tahap", "等级", "நிலை"),
+        ["report.col.lessons"] = T("Lessons", "Pelajaran", "课程", "பாடங்கள்"),
+        ["report.col.last_active"] = T("Last active", "Aktif terakhir", "最近活动", "கடைசி செயல்பாடு"),
+        ["report.activity"] = T("Activity (last 12 weeks)", "Aktiviti (12 minggu lepas)", "活动（最近 12 周）", "செயல்பாடு (கடந்த 12 வாரங்கள்)"),
+        ["report.badges"] = T("Badges", "Lencana", "徽章", "பதக்கங்கள்"),
+        ["report.exams"] = T("Recent exam results", "Keputusan peperiksaan terkini", "近期考试成绩", "சமீபத்திய தேர்வு முடிவுகள்"),
+        ["report.col.date"] = T("Date", "Tarikh", "日期", "தேதி"),
+        ["report.col.score"] = T("Score", "Markah", "分数", "மதிப்பெண்"),
+        ["report.col.grade"] = T("Grade", "Gred", "等级", "தரம்"),
+        ["report.no_exams"] = T("No exams taken yet.", "Tiada peperiksaan diambil lagi.", "尚未参加考试。", "இன்னும் தேர்வுகள் எடுக்கவில்லை."),
+        ["report.not_found"] = T(
+            "We couldn't find a report for this student.",
+            "Kami tidak dapat menemui laporan untuk pelajar ini.",
+            "找不到该学生的报告。",
+            "இந்த மாணவருக்கான அறிக்கையைக் கண்டுபிடிக்க முடியவில்லை."),
+        ["report.error"] = T(
+            "We couldn't load this report. Please try again.",
+            "Kami tidak dapat memuatkan laporan ini. Sila cuba lagi.",
+            "无法加载此报告，请重试。",
+            "இந்த அறிக்கையை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+
         // Parent — tutor conversation review
         ["parent.tutor.title"] = T("Tutor conversations", "Perbualan tutor", "导师对话", "ஆசிரியர் உரையாடல்கள்"),
         ["parent.tutor.sub"] = T(
