@@ -86,6 +86,27 @@
                 </div>
             </section>
 
+            @if (_recs.Count > 0)
+            {
+                <section class="card recs-card" aria-labelledby="recs-h">
+                    <h2 id="recs-h" class="card-title">@T["student.recs.title"]</h2>
+                    <ul class="recs-list">
+                        @foreach (var rec in _recs)
+                        {
+                            <li>
+                                <a class="rec-row" href="@($"/student/lesson/{rec.LessonId}")">
+                                    <span class="rec-main">
+                                        <span class="rec-title">@rec.LessonTitle</span>
+                                        <span class="rec-sub">@rec.SubjectName@(rec.StandardCode is null ? "" : $" · {rec.StandardCode}")</span>
+                                    </span>
+                                    <span class="rec-chip rec-@(rec.Reason.ToString().ToLowerInvariant())">@ReasonLabel(rec.Reason)</span>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+
             <div class="home-grid">
                 <section class="card" aria-labelledby="subjects-h">
                     <h2 id="subjects-h" class="card-title">@T["student.subjects.title"]</h2>
@@ -159,6 +180,17 @@
     .qstat { background: #fff; border: 1px solid #e2e8f0; border-radius: .75rem; padding: 1rem; }
     .qstat-label { display: block; font-size: .75rem; color: #64748b; text-transform: uppercase; letter-spacing: .03em; }
     .qstat-value { font-size: 1.6rem; font-weight: 800; color: #0f172a; }
+    .recs-card { margin-bottom: 1.5rem; }
+    .recs-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+    .rec-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .6rem .75rem; border: 1px solid #eef2f7; border-radius: .6rem; text-decoration: none; }
+    .rec-row:hover { border-color: var(--brand-300); background: #f8fafc; }
+    .rec-main { display: flex; flex-direction: column; min-width: 0; }
+    .rec-title { font-weight: 600; color: #1e293b; }
+    .rec-sub { font-size: .76rem; color: #64748b; }
+    .rec-chip { flex-shrink: 0; font-size: .68rem; font-weight: 700; border-radius: 9999px; padding: .15rem .55rem; }
+    .rec-continue { background: var(--brand-50); color: var(--brand-700); border: 1px solid var(--brand-100, #dbeafe); }
+    .rec-review { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+    .rec-new { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
     .home-grid { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
     .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
     .subject-list, .badge-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; }
@@ -186,6 +218,7 @@
     private StudentSummaryDto? _student;
     private ProgressDto? _progress;
     private StudentStreakDto? _streak;
+    private IReadOnlyList<LessonRecommendationDto> _recs = Array.Empty<LessonRecommendationDto>();
     private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
     private Language _language = Language.BM;
     private bool _loading = true;
@@ -217,6 +250,7 @@
 
             _progress = await Api.GetStudentProgressAsync(studentId.Value);
             _streak = await Api.GetStreakAsync(studentId.Value);
+            _recs = await Api.GetRecommendationsAsync(studentId.Value);
 
             var filter = _student is null
                 ? new CurriculumFilter()
@@ -264,6 +298,13 @@
 
     private static int GoalPct(StudentStreakDto s) =>
         s.GoalMinutes <= 0 ? 100 : Math.Min(100, (int)Math.Round(100.0 * s.TodayMinutes / s.GoalMinutes));
+
+    private string ReasonLabel(RecommendationReason reason) => reason switch
+    {
+        RecommendationReason.Continue => T["student.recs.reason.continue"],
+        RecommendationReason.Review => T["student.recs.reason.review"],
+        _ => T["student.recs.reason.new"],
+    };
 
     public void Dispose() => Current.OnChange -= OnStudentChanged;
 }

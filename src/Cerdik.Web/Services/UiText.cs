@@ -162,6 +162,12 @@ public sealed class UiText : IUiText
         ["student.cta.progress"] = T("📈 See my progress", "📈 Lihat kemajuan saya", "📈 查看我的进度", "📈 எனது முன்னேற்றத்தைக் காண்க"),
         ["student.badges.recent"] = T("Recent badges", "Lencana terbaru", "最近的徽章", "சமீபத்திய பதக்கங்கள்"),
 
+        // Student — adaptive recommendations
+        ["student.recs.title"] = T("Recommended for you", "Disyorkan untuk anda", "为你推荐", "உங்களுக்கான பரிந்துரைகள்"),
+        ["student.recs.reason.continue"] = T("Continue", "Sambung", "继续", "தொடர்க"),
+        ["student.recs.reason.review"] = T("Review", "Ulang kaji", "复习", "மீள்பார்வை"),
+        ["student.recs.reason.new"] = T("New", "Baharu", "新课", "புதியது"),
+
         // Student — streak & daily goal
         ["student.streak.days"] = T("{0}-day streak", "{0} hari berturut", "连续 {0} 天", "{0} நாள் தொடர்"),
         ["student.streak.start"] = T("Start your streak today!", "Mulakan rentetan anda hari ini!", "今天开始你的连胜吧！", "இன்று உங்கள் தொடரைத் தொடங்குங்கள்!"),

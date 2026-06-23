@@ -68,6 +68,17 @@ public sealed record SubjectStandardsMasteryDto(
 
 public sealed record BadgeDto(string Code, string Name, string? Icon, DateTimeOffset AwardedAt);
 
+// ---- Adaptive recommendations ----
+public enum RecommendationReason { Continue, Review, New }
+
+/// <summary>A recommended next lesson for a student, with why it was chosen.</summary>
+public sealed record LessonRecommendationDto(
+    Guid LessonId,
+    string LessonTitle,
+    string SubjectName,
+    string? StandardCode,
+    RecommendationReason Reason);
+
 // ---- Streak & daily goal ----
 public sealed record StudentStreakDto(
     int CurrentStreak,

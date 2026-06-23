@@ -196,6 +196,26 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Recommendations_return_ranked_next_lessons()
+    {
+        var client = await LoginAsParentAsync();
+        Guid studentId;
+        using (var db = _factory.NewDbContext())
+        {
+            studentId = (await db.Students.FirstAsync(s => s.DisplayName == "Aisyah")).Id;
+        }
+
+        var resp = await client.GetAsync($"/students/{studentId}/recommendations?limit=5");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var recs = await resp.Content.ReadFromJsonAsync<List<LessonRecommendationDto>>(TestJson.Options);
+        recs.Should().NotBeNull();
+        recs!.Count.Should().BeLessThanOrEqualTo(5);
+        // Whatever is recommended must be well-formed (an empty list is a valid result).
+        recs.All(r => !string.IsNullOrEmpty(r.LessonTitle) && r.LessonId != Guid.Empty).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();

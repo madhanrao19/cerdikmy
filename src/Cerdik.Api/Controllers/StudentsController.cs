@@ -141,6 +141,82 @@ public sealed class StudentsController : ControllerBase
             current, longest, set.Contains(today), todayMinutes, goal, todayMinutes >= goal, recent));
     }
 
+    /// <summary>Adaptive "what to do next": ranks the student's published curriculum lessons by need —
+    /// continue in-progress work, review under-mastered standards, then start new lessons.</summary>
+    [HttpGet("/students/{id:guid}/recommendations")]
+    public async Task<ActionResult<IReadOnlyList<LessonRecommendationDto>>> Recommendations(Guid id, int limit, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+        var student = await _db.Students.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id, ct)
+            ?? throw ApiException.NotFound("Student");
+        var take = Math.Clamp(limit <= 0 ? 6 : limit, 1, 20);
+
+        // Candidate lessons = published lessons matching the student's variant (level/school/lang/DLP).
+        var lessons = await _db.Lessons.AsNoTracking()
+            .Where(l => l.State == PublishState.Published
+                        && l.SubjectVariant.SchoolType == student.SchoolType
+                        && l.SubjectVariant.Language == student.PrimaryLanguage
+                        && l.SubjectVariant.DlpMode == student.DlpMode
+                        && l.SubjectVariant.Subject.Level == student.Level)
+            .Select(l => new
+            {
+                l.Id,
+                l.Title,
+                l.SortOrder,
+                SubjectName = l.SubjectVariant.Subject.Name,
+                StandardCode = l.LearningStandard != null ? l.LearningStandard.Code : null,
+                TargetBand = l.LearningStandard != null ? (MasteryBand?)l.LearningStandard.TargetBand : null,
+            })
+            .ToListAsync(ct);
+
+        var records = await _db.ProgressRecords.AsNoTracking()
+            .Where(p => p.StudentId == id)
+            .Select(p => new { p.LessonId, p.Completed, p.MasteryScore })
+            .ToListAsync(ct);
+        var byLesson = records.GroupBy(r => r.LessonId).ToDictionary(g => g.Key, g => g.First());
+
+        var ranked = new List<(int Priority, string Subject, int Sort, LessonRecommendationDto Dto)>();
+        foreach (var l in lessons)
+        {
+            byLesson.TryGetValue(l.Id, out var rec);
+            var started = rec is not null;
+            var completed = rec?.Completed ?? false;
+            var band = MasteryMath.ToBand(rec?.MasteryScore ?? 0);
+            var target = l.TargetBand ?? MasteryBand.TP4;
+
+            RecommendationReason? reason;
+            int priority;
+            if (started && !completed)
+            {
+                reason = RecommendationReason.Continue; priority = 1;
+            }
+            else if (completed && (int)band < (int)target)
+            {
+                reason = RecommendationReason.Review; priority = 2;
+            }
+            else if (!started)
+            {
+                reason = RecommendationReason.New; priority = 3;
+            }
+            else
+            {
+                reason = null; priority = 0; // completed & at/above target — solidly done, skip.
+            }
+
+            if (reason is { } r)
+            {
+                ranked.Add((priority, l.SubjectName, l.SortOrder,
+                    new LessonRecommendationDto(l.Id, l.Title, l.SubjectName, l.StandardCode, r)));
+            }
+        }
+
+        var result = ranked
+            .OrderBy(x => x.Priority).ThenBy(x => x.Subject).ThenBy(x => x.Sort)
+            .Take(take).Select(x => x.Dto).ToList();
+
+        return Ok(result);
+    }
+
     /// <summary>Shared progress builder reused by the parent dashboard.</summary>
     internal static async Task<ProgressDto> BuildProgress(AppDbContext db, Guid studentId, string studentName, CancellationToken ct)
     {
