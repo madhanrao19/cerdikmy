@@ -114,6 +114,12 @@ public sealed class ApiClient
     public Task<StudyPlanDto> CreateStudyPlanAsync(StudyPlanRequest request, CancellationToken ct = default)
         => PostAsync<StudyPlanRequest, StudyPlanDto>("/parents/study-plans", request, ct);
 
+    public Task<IReadOnlyList<TutorSessionSummaryDto>> GetChildTutorSessionsAsync(Guid studentId, CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<TutorSessionSummaryDto>>($"/parents/students/{studentId}/tutor-sessions", ct);
+
+    public Task<TutorSessionDto> GetTutorTranscriptAsync(Guid sessionId, CancellationToken ct = default)
+        => GetAsync<TutorSessionDto>($"/parents/tutor-sessions/{sessionId}", ct);
+
     // --------------------------------------------------------------- Tutor
     public Task<TutorSessionDto> CreateTutorSessionAsync(CreateTutorSessionRequest request, CancellationToken ct = default)
         => PostAsync<CreateTutorSessionRequest, TutorSessionDto>("/tutor/sessions", request, ct);

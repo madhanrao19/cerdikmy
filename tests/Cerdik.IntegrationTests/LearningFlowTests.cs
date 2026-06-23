@@ -104,6 +104,42 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Parent_can_review_a_childs_tutor_conversations()
+    {
+        var client = await LoginAsParentAsync();
+        var studentId = await FirstStudentIdAsync(client);
+
+        var sessionResp = await client.PostAsJsonAsync("/tutor/sessions",
+            new CreateTutorSessionRequest(studentId, null, null, "Review me"));
+        var session = await sessionResp.Content.ReadFromJsonAsync<TutorSessionDto>(TestJson.Options);
+        await client.PostAsJsonAsync($"/tutor/sessions/{session!.Id}/messages",
+            new SendTutorMessageRequest("Hello tutor"));
+
+        // List view
+        var listResp = await client.GetAsync($"/parents/students/{studentId}/tutor-sessions");
+        listResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var summaries = await listResp.Content.ReadFromJsonAsync<List<TutorSessionSummaryDto>>(TestJson.Options);
+        var summary = summaries!.Single(s => s.Id == session.Id);
+        summary.MessageCount.Should().BeGreaterThanOrEqualTo(2, "the user message and the assistant reply are both stored");
+
+        // Transcript view
+        var transcriptResp = await client.GetAsync($"/parents/tutor-sessions/{session.Id}");
+        transcriptResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var transcript = await transcriptResp.Content.ReadFromJsonAsync<TutorSessionDto>(TestJson.Options);
+        transcript!.Messages.Should().Contain(m => m.Role == TutorMessageRole.User);
+        transcript.Messages.Should().Contain(m => m.Role == TutorMessageRole.Assistant);
+    }
+
+    [Fact]
+    public async Task Parent_cannot_review_sessions_for_a_student_they_do_not_guardian()
+    {
+        var client = await LoginAsParentAsync();
+
+        var resp = await client.GetAsync($"/parents/students/{Guid.NewGuid()}/tutor-sessions");
+        resp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();
