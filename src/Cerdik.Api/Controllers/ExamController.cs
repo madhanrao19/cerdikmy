@@ -111,8 +111,11 @@ public sealed class ExamController : ControllerBase
         exam.Band = MasteryMath.ToBand(percent);
         exam.Grade = GradeFor(percent);
         exam.SubmittedAt = _clock.UtcNow;
-        // Clamp the reported duration to the allotted time (don't trust the client blindly).
-        exam.DurationSeconds = Math.Clamp(req.ElapsedSeconds, 0, exam.DurationSeconds);
+        // Derive elapsed time from the server clock (StartedAt -> now), not the client-reported value,
+        // so a suspended tab or a hand-crafted request can't make a timed exam effectively untimed.
+        // Clamp to the allotted duration so a late/timed-out submission records at most the full time.
+        var serverElapsed = (int)Math.Round((_clock.UtcNow - exam.StartedAt).TotalSeconds);
+        exam.DurationSeconds = Math.Clamp(serverElapsed, 0, exam.DurationSeconds);
         exam.StandardsJson = JsonSerializer.Serialize(standards, Json);
         await _db.SaveChangesAsync(ct);
 
