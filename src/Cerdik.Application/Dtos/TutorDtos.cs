@@ -32,6 +32,19 @@ public sealed record TutorMessageDto(
 
 public sealed record CitationDto(Guid ChunkId, Guid LessonId, string LessonTitle, string Snippet, double Score, int Ordinal);
 
+/// <summary>Lightweight tutor-session row for a guardian reviewing a child's conversations
+/// (no message bodies — those are fetched per session).</summary>
+public sealed record TutorSessionSummaryDto(
+    Guid Id,
+    Guid StudentId,
+    string Title,
+    Language Language,
+    bool NeedsReview,
+    RiskLevel HighestRisk,
+    int MessageCount,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastMessageAt);
+
 public sealed record SendTutorMessageRequest(string Content);
 
 /// <summary>Non-streaming reply (the SSE endpoint streams the same shape incrementally).</summary>

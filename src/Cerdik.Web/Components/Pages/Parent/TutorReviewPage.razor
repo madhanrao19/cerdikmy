@@ -1,0 +1,184 @@
+@page "/parent/tutor-review"
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject IUiText T
+
+<PageTitle>@T["parent.tutor.title"] — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Parent })">
+        <h1 class="page-title">@T["parent.tutor.title"]</h1>
+        <p class="page-sub mb-6">@T["parent.tutor.sub"]</p>
+
+        @if (Auth.Students.Count == 0)
+        {
+            <div class="card" role="status"><p class="text-slate-600">@T["parent.tutor.no_children"]</p></div>
+        }
+        else
+        {
+            <div class="child-tabs no-print" role="group" aria-label="@T["parent.tutor.child"]">
+                @foreach (var child in Auth.Students)
+                {
+                    <button type="button" class="child-tab @(child.Id == _childId ? "active" : "")"
+                            aria-pressed="@(child.Id == _childId)" @onclick="() => SelectChildAsync(child.Id)">
+                        @child.DisplayName
+                    </button>
+                }
+            </div>
+
+            @if (_transcript is not null)
+            {
+                <button class="back-link no-print" @onclick="CloseTranscript">← @T["parent.tutor.back"]</button>
+                <section class="card transcript" aria-label="@_transcript.Title">
+                    <h2 class="transcript-title">@_transcript.Title</h2>
+                    @foreach (var m in _transcript.Messages.Where(m => m.Role != TutorMessageRole.System))
+                    {
+                        <div class="msg @(m.Role == TutorMessageRole.User ? "msg-user" : "msg-tutor")">
+                            <span class="msg-role">@(m.Role == TutorMessageRole.User ? T["parent.tutor.role.student"] : T["parent.tutor.role.tutor"])</span>
+                            <div class="msg-body">@m.Content</div>
+                            @if (m.Citations.Count > 0)
+                            {
+                                <ul class="msg-cites">
+                                    @foreach (var c in m.Citations)
+                                    {
+                                        <li>📚 @c.LessonTitle</li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+                </section>
+            }
+            else if (_loading)
+            {
+                <p class="text-slate-500" role="status">@T["parent.tutor.loading"]</p>
+            }
+            else if (_error is not null)
+            {
+                <div class="card" role="alert">
+                    <p class="text-rose-700">@_error</p>
+                    <button class="btn-secondary mt-4" @onclick="ReloadAsync">@T["common.retry"]</button>
+                </div>
+            }
+            else if (_sessions.Count == 0)
+            {
+                <div class="card empty" role="status"><p>@T["parent.tutor.empty"]</p></div>
+            }
+            else
+            {
+                <ul class="session-list">
+                    @foreach (var s in _sessions)
+                    {
+                        <li>
+                            <button type="button" class="session-row" @onclick="() => OpenTranscriptAsync(s.Id)">
+                                <span class="session-main">
+                                    <span class="session-title">@s.Title</span>
+                                    <span class="session-meta">@s.MessageCount @T["parent.tutor.messages"] · @s.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                </span>
+                                @if (s.NeedsReview)
+                                {
+                                    <span class="flag-pill">⚠ @T["parent.tutor.flagged"]</span>
+                                }
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; max-width: 42rem; }
+    .child-tabs { display: inline-flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.25rem; }
+    .child-tab { border: 1px solid #cbd5e1; background: #fff; border-radius: 9999px; padding: .35rem .9rem; font-size: .85rem; font-weight: 600; color: #475569; cursor: pointer; }
+    .child-tab.active { background: var(--brand-600); color: #fff; border-color: var(--brand-600); }
+    .child-tab:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+    .session-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .6rem; max-width: 48rem; }
+    .session-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; text-align: left; background: #fff; border: 1px solid #e8edf6; border-radius: .75rem; padding: .85rem 1rem; cursor: pointer; }
+    .session-row:hover { border-color: var(--brand-300); background: #f8fafc; }
+    .session-row:focus-visible { outline: 2px solid var(--brand-500); outline-offset: 2px; }
+    .session-main { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+    .session-title { font-weight: 600; color: #1e293b; }
+    .session-meta { font-size: .78rem; color: #64748b; }
+    .flag-pill { flex-shrink: 0; font-size: .72rem; font-weight: 700; color: #b45309; background: #fef3c7; border: 1px solid #fde68a; border-radius: 9999px; padding: .15rem .55rem; }
+    .back-link { background: transparent; border: 0; color: var(--brand-600); font-weight: 600; font-size: .85rem; cursor: pointer; padding: 0; margin-bottom: 1rem; }
+    .transcript { max-width: 48rem; display: flex; flex-direction: column; gap: 1rem; }
+    .transcript-title { font-size: 1.15rem; font-weight: 700; color: #0f172a; }
+    .msg { border-radius: .75rem; padding: .75rem 1rem; }
+    .msg-user { background: var(--brand-50); border: 1px solid var(--brand-100, #e0e7ff); }
+    .msg-tutor { background: #f8fafc; border: 1px solid #e8edf6; }
+    .msg-role { display: block; font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: #64748b; margin-bottom: .25rem; }
+    .msg-body { color: #1e293b; white-space: pre-wrap; line-height: 1.5; }
+    .msg-cites { list-style: none; margin: .5rem 0 0; padding: .5rem 0 0; border-top: 1px dashed #e2e8f0; display: flex; flex-wrap: wrap; gap: .5rem; font-size: .76rem; color: #475569; }
+    .empty { text-align: center; color: #64748b; }
+</style>
+
+@code {
+    private Guid? _childId;
+    private IReadOnlyList<TutorSessionSummaryDto> _sessions = Array.Empty<TutorSessionSummaryDto>();
+    private TutorSessionDto? _transcript;
+    private bool _loading;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var first = Auth.Students.FirstOrDefault();
+        if (first is not null) await SelectChildAsync(first.Id);
+    }
+
+    private async Task SelectChildAsync(Guid childId)
+    {
+        _childId = childId;
+        _transcript = null;
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_childId is not { } id) return;
+        _loading = true;
+        _error = null;
+        try
+        {
+            _sessions = await Api.GetChildTutorSessionsAsync(id);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = T["parent.tutor.error"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task OpenTranscriptAsync(Guid sessionId)
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _transcript = await Api.GetTutorTranscriptAsync(sessionId);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = T["parent.tutor.error"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void CloseTranscript() => _transcript = null;
+}

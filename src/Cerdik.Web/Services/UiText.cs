@@ -58,6 +58,7 @@ public sealed class UiText : IUiText
         ["nav.plans"] = T("Plans", "Pelan", "计划", "திட்டங்கள்"),
         ["nav.billing"] = T("Billing", "Pengebilan", "账单", "பில்லிங்"),
         ["nav.safety"] = T("Safety", "Keselamatan", "安全", "பாதுகாப்பு"),
+        ["nav.tutor_review"] = T("Tutor chats", "Sembang tutor", "导师对话", "ஆசிரியர் அரட்டை"),
         ["nav.today"] = T("Today", "Hari Ini", "今天", "இன்று"),
         ["nav.tutor"] = T("Tutor", "Tutor", "导师", "ஆசிரியர்"),
         ["nav.progress"] = T("Progress", "Kemajuan", "进度", "முன்னேற்றம்"),
@@ -93,6 +94,36 @@ public sealed class UiText : IUiText
             "Tiada profil pelajar dikaitkan dengan akaun anda.",
             "您的账户未关联学生档案。",
             "உங்கள் கணக்குடன் மாணவர் சுயவிவரம் இணைக்கப்படவில்லை."),
+
+        // Parent — tutor conversation review
+        ["parent.tutor.title"] = T("Tutor conversations", "Perbualan tutor", "导师对话", "ஆசிரியர் உரையாடல்கள்"),
+        ["parent.tutor.sub"] = T(
+            "Review your child's AI tutor chats. Flagged conversations appear first.",
+            "Semak sembang tutor AI anak anda. Perbualan yang dibenderakan dipaparkan dahulu.",
+            "查看您孩子与 AI 导师的对话。被标记的对话会优先显示。",
+            "உங்கள் குழந்தையின் AI ஆசிரியர் அரட்டைகளை மதிப்பாய்வு செய்யுங்கள். கொடியிடப்பட்ட உரையாடல்கள் முதலில் தோன்றும்."),
+        ["parent.tutor.child"] = T("Child", "Anak", "孩子", "குழந்தை"),
+        ["parent.tutor.no_children"] = T(
+            "No child profiles are linked to your account.",
+            "Tiada profil anak dikaitkan dengan akaun anda.",
+            "您的账户未关联任何孩子档案。",
+            "உங்கள் கணக்குடன் குழந்தை சுயவிவரங்கள் எதுவும் இணைக்கப்படவில்லை."),
+        ["parent.tutor.loading"] = T("Loading conversations…", "Memuatkan perbualan…", "正在加载对话…", "உரையாடல்களை ஏற்றுகிறது…"),
+        ["parent.tutor.error"] = T(
+            "We couldn't load conversations. Please try again.",
+            "Kami tidak dapat memuatkan perbualan. Sila cuba lagi.",
+            "无法加载对话，请重试。",
+            "உரையாடல்களை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["parent.tutor.empty"] = T(
+            "No tutor conversations yet.",
+            "Tiada perbualan tutor lagi.",
+            "暂无导师对话。",
+            "இன்னும் ஆசிரியர் உரையாடல்கள் இல்லை."),
+        ["parent.tutor.flagged"] = T("Flagged", "Dibenderakan", "已标记", "கொடியிடப்பட்டது"),
+        ["parent.tutor.messages"] = T("messages", "mesej", "条消息", "செய்திகள்"),
+        ["parent.tutor.back"] = T("Back to conversations", "Kembali ke perbualan", "返回对话列表", "உரையாடல்களுக்குத் திரும்பு"),
+        ["parent.tutor.role.student"] = T("Child", "Anak", "孩子", "குழந்தை"),
+        ["parent.tutor.role.tutor"] = T("AI Tutor", "Tutor AI", "AI 导师", "AI ஆசிரியர்"),
 
         // Student — shared
         ["student.greeting"] = T("Hi, {0}!", "Hai, {0}!", "你好，{0}！", "வணக்கம், {0}!"),

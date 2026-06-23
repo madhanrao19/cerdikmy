@@ -98,6 +98,50 @@ public sealed class ParentsController : ControllerBase
         return Ok(new StudyPlanDto(plan.Id, plan.StudentId, plan.Name, plan.TargetMinutesPerDay, req.Schedule, plan.IsActive));
     }
 
+    /// <summary>Lists a child's AI tutor conversations so a guardian can review them. Flagged
+    /// sessions (NeedsReview / elevated risk) surface first.</summary>
+    [HttpGet("/parents/students/{studentId:guid}/tutor-sessions")]
+    public async Task<ActionResult<IReadOnlyList<TutorSessionSummaryDto>>> TutorSessions(Guid studentId, CancellationToken ct)
+    {
+        await EnsureGuardian(studentId, ct);
+
+        var sessions = await _db.TutorSessions.AsNoTracking()
+            .Where(s => s.StudentId == studentId)
+            .Select(s => new TutorSessionSummaryDto(
+                s.Id, s.StudentId, s.Title, s.Language, s.NeedsReview, s.HighestRisk,
+                s.Messages.Count, s.CreatedAt,
+                s.Messages.OrderByDescending(m => m.CreatedAt).Select(m => (DateTimeOffset?)m.CreatedAt).FirstOrDefault()))
+            .ToListAsync(ct);
+
+        // Flagged first, then most recent activity.
+        return Ok(sessions
+            .OrderByDescending(s => s.NeedsReview)
+            .ThenByDescending(s => s.LastMessageAt ?? s.CreatedAt)
+            .ToList());
+    }
+
+    /// <summary>Full transcript of one tutor session for guardian review.</summary>
+    [HttpGet("/parents/tutor-sessions/{sessionId:guid}")]
+    public async Task<ActionResult<TutorSessionDto>> TutorSessionTranscript(Guid sessionId, CancellationToken ct)
+    {
+        var session = await _db.TutorSessions.AsNoTracking()
+            .Include(s => s.Messages).ThenInclude(m => m.Citations)
+            .FirstOrDefaultAsync(s => s.Id == sessionId, ct)
+            ?? throw ApiException.NotFound("Tutor session");
+
+        await EnsureGuardian(session.StudentId, ct);
+
+        return Ok(new TutorSessionDto(
+            session.Id, session.StudentId, session.SubjectVariantId, session.Title,
+            session.CurriculumVersionCode, session.SchoolType, session.Language, session.DlpMode,
+            session.NeedsReview, session.HighestRisk,
+            session.Messages.OrderBy(m => m.CreatedAt).Select(m => new TutorMessageDto(
+                m.Id, m.Role, m.Content, m.MasterySignal, m.NeedsReview,
+                m.Citations.OrderBy(c => c.Ordinal).Select(c => new CitationDto(
+                    c.EmbeddingChunkId, c.LessonId, c.LessonTitle, c.Snippet, c.Score, c.Ordinal)).ToList(),
+                m.CreatedAt)).ToList()));
+    }
+
     private async Task EnsureGuardian(Guid studentId, CancellationToken ct)
     {
         if (_current.IsInRole(UserRole.Admin)) return;

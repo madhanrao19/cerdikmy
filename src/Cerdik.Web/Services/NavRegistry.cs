@@ -16,6 +16,7 @@ public static class NavRegistry
         new("/parent/plan", "nav.plans", "🗓️", [UserRole.Parent]),
         new("/parent/billing", "nav.billing", "💳", [UserRole.Parent]),
         new("/parent/flags", "nav.safety", "🚩", [UserRole.Parent]),
+        new("/parent/tutor-review", "nav.tutor_review", "💬", [UserRole.Parent]),
         // Student
         new("/student", "nav.today", "🏠", [UserRole.Student]),
         new("/student/tutor", "nav.tutor", "💬", [UserRole.Student]),
