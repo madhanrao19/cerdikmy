@@ -160,6 +160,34 @@ public sealed class UiText : IUiText
             "உங்கள் AI ஆசிரியருடன் பயிற்சி செய்யுங்கள் அல்லது பாடத்திற்குத் திரும்புங்கள்."),
         ["student.cta.tutor"] = T("💬 Ask the AI tutor", "💬 Tanya tutor AI", "💬 询问 AI 导师", "💬 AI ஆசிரியரிடம் கேளுங்கள்"),
         ["student.cta.progress"] = T("📈 See my progress", "📈 Lihat kemajuan saya", "📈 查看我的进度", "📈 எனது முன்னேற்றத்தைக் காண்க"),
+        ["student.cta.placement"] = T("📋 Take a placement check", "📋 Buat ujian penempatan", "📋 进行分级测试", "📋 நிலை தேர்வை எடுக்கவும்"),
+
+        // Student — placement / diagnostic test
+        ["student.placement.title"] = T("Placement check", "Ujian penempatan", "分级测试", "நிலைத் தேர்வு"),
+        ["student.placement.sub"] = T(
+            "A quick quiz to find the best place to start.",
+            "Kuiz ringkas untuk mencari tempat terbaik untuk bermula.",
+            "一个快速测验，帮你找到最合适的起点。",
+            "தொடங்குவதற்கு சிறந்த இடத்தைக் கண்டறிய ஒரு விரைவான வினாடி வினா."),
+        ["student.placement.pick"] = T("Choose a subject", "Pilih subjek", "选择科目", "ஒரு பாடத்தைத் தேர்வுசெய்க"),
+        ["student.placement.start"] = T("Start placement", "Mula penempatan", "开始测试", "தேர்வைத் தொடங்கு"),
+        ["student.placement.loading"] = T("Loading…", "Memuatkan…", "加载中…", "ஏற்றுகிறது…"),
+        ["student.placement.error"] = T(
+            "We couldn't load the placement. Please try again.",
+            "Kami tidak dapat memuatkan penempatan. Sila cuba lagi.",
+            "无法加载测试，请重试。",
+            "தேர்வை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["student.placement.empty"] = T(
+            "No placement questions are available for this subject yet.",
+            "Tiada soalan penempatan tersedia untuk subjek ini lagi.",
+            "此科目暂无测试题目。",
+            "இந்தப் பாடத்திற்கு இன்னும் தேர்வு கேள்விகள் இல்லை."),
+        ["student.placement.submit"] = T("See my result", "Lihat keputusan saya", "查看结果", "எனது முடிவைப் பார்"),
+        ["student.placement.submitting"] = T("Checking…", "Menyemak…", "检查中…", "சரிபார்க்கிறது…"),
+        ["student.placement.result_title"] = T("Your placement result", "Keputusan penempatan anda", "你的测试结果", "உங்கள் தேர்வு முடிவு"),
+        ["student.placement.score"] = T("You scored {0}%", "Anda mendapat {0}%", "你得了 {0}%", "நீங்கள் {0}% பெற்றீர்கள்"),
+        ["student.placement.recommended"] = T("Suggested starting level: {0}", "Tahap permulaan dicadangkan: {0}", "建议起始级别：{0}", "பரிந்துரைக்கப்பட்ட தொடக்க நிலை: {0}"),
+        ["student.placement.retake"] = T("Take another", "Ambil yang lain", "再测一次", "மற்றொன்றை எடு"),
         ["student.badges.recent"] = T("Recent badges", "Lencana terbaru", "最近的徽章", "சமீபத்திய பதக்கங்கள்"),
 
         // Student — adaptive recommendations

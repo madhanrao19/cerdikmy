@@ -68,6 +68,23 @@ public sealed record SubjectStandardsMasteryDto(
 
 public sealed record BadgeDto(string Code, string Name, string? Icon, DateTimeOffset AwardedAt);
 
+// ---- Diagnostic / placement test ----
+public sealed record PlacementQuestionDto(string Key, string Prompt, QuestionType Type, IReadOnlyList<string> Options);
+
+public sealed record PlacementTestDto(Guid SubjectId, string SubjectName, IReadOnlyList<PlacementQuestionDto> Questions);
+
+public sealed record PlacementSubmitRequest(IReadOnlyDictionary<string, string> Answers);
+
+public sealed record PlacementStandardScoreDto(string Code, string Strand, double Percent, MasteryBand Band);
+
+public sealed record PlacementResultDto(
+    Guid SubjectId,
+    int Answered,
+    int Correct,
+    double PercentScore,
+    MasteryBand RecommendedBand,
+    IReadOnlyList<PlacementStandardScoreDto> Standards);
+
 // ---- Adaptive recommendations ----
 public enum RecommendationReason { Continue, Review, New }
 

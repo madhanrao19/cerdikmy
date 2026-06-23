@@ -116,6 +116,12 @@ public sealed class ApiClient
     public Task<IReadOnlyList<LessonRecommendationDto>> GetRecommendationsAsync(Guid studentId, int limit = 6, CancellationToken ct = default)
         => GetAsync<IReadOnlyList<LessonRecommendationDto>>($"/students/{studentId}/recommendations?limit={limit}", ct);
 
+    public Task<PlacementTestDto> GetPlacementAsync(Guid studentId, Guid subjectId, CancellationToken ct = default)
+        => GetAsync<PlacementTestDto>($"/students/{studentId}/subjects/{subjectId}/placement", ct);
+
+    public Task<PlacementResultDto> SubmitPlacementAsync(Guid studentId, Guid subjectId, IReadOnlyDictionary<string, string> answers, CancellationToken ct = default)
+        => PostAsync<PlacementSubmitRequest, PlacementResultDto>($"/students/{studentId}/subjects/{subjectId}/placement", new PlacementSubmitRequest(answers), ct);
+
     // -------------------------------------------------------------- Parent
     public Task<ParentDashboardDto> GetParentDashboardAsync(CancellationToken ct = default)
         => GetAsync<ParentDashboardDto>("/parents/dashboard", ct);
