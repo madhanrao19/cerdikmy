@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<Attempt> Attempts => Set<Attempt>();
     public DbSet<ProgressRecord> ProgressRecords => Set<ProgressRecord>();
     public DbSet<Badge> Badges => Set<Badge>();
+    public DbSet<ExamAttempt> ExamAttempts => Set<ExamAttempt>();
 
     public DbSet<TutorSession> TutorSessions => Set<TutorSession>();
     public DbSet<TutorMessage> TutorMessages => Set<TutorMessage>();
@@ -245,6 +246,14 @@ public class AppDbContext : DbContext
         b.Entity<Badge>(e =>
         {
             e.HasIndex(x => new { x.StudentId, x.Code }).IsUnique();
+            e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ExamAttempt>(e =>
+        {
+            e.HasIndex(x => new { x.StudentId, x.SubjectId });
+            e.Property(x => x.SubjectName).HasMaxLength(200);
+            e.Property(x => x.Grade).HasMaxLength(4);
             e.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId).OnDelete(DeleteBehavior.Cascade);
         });
 

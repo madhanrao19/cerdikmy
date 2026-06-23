@@ -254,6 +254,50 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Mock_exam_starts_grades_and_records_history()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid studentId, subjectId;
+        using (var db = _factory.NewDbContext())
+        {
+            studentId = (await db.Students.FirstAsync(s => s.DisplayName == "Aisyah")).Id;
+            var maths = await db.Activities.Include(a => a.Lesson)
+                .FirstAsync(a => a.QuestionsJson.Contains("\"m1\""));
+            subjectId = await db.SubjectVariants.Where(v => v.Id == maths.Lesson.SubjectVariantId)
+                .Select(v => v.SubjectId).FirstAsync();
+        }
+
+        var startResp = await client.PostAsync($"/students/{studentId}/subjects/{subjectId}/exam/start", null);
+        startResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var exam = await startResp.Content.ReadFromJsonAsync<ExamStartDto>(TestJson.Options);
+        exam!.Questions.Should().NotBeEmpty();
+        exam.DurationSeconds.Should().BeGreaterThan(0);
+
+        var known = new Dictionary<string, string> { ["m1"] = "7", ["m2"] = "7", ["m3"] = "Palsu" };
+        var answers = exam.Questions
+            .Where(q => known.ContainsKey(q.Key.Split('|')[1]))
+            .ToDictionary(q => q.Key, q => known[q.Key.Split('|')[1]]);
+
+        var submitResp = await client.PostAsJsonAsync(
+            $"/students/{studentId}/exam/{exam.ExamId}/submit", new ExamSubmitRequest(answers, 120));
+        submitResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await submitResp.Content.ReadFromJsonAsync<ExamResultDto>(TestJson.Options);
+        result!.QuestionCount.Should().Be(exam.Questions.Count);
+        result.CorrectCount.Should().BeGreaterThan(0);
+        result.Grade.Should().NotBeNullOrEmpty();
+
+        var history = await client.GetFromJsonAsync<List<ExamHistoryItemDto>>(
+            $"/students/{studentId}/exams", TestJson.Options);
+        history!.Should().Contain(h => h.ExamId == exam.ExamId);
+
+        // A submitted exam can't be re-submitted.
+        var second = await client.PostAsJsonAsync(
+            $"/students/{studentId}/exam/{exam.ExamId}/submit", new ExamSubmitRequest(answers, 120));
+        second.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();

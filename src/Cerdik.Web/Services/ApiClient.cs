@@ -122,6 +122,16 @@ public sealed class ApiClient
     public Task<PlacementResultDto> SubmitPlacementAsync(Guid studentId, Guid subjectId, IReadOnlyDictionary<string, string> answers, CancellationToken ct = default)
         => PostAsync<PlacementSubmitRequest, PlacementResultDto>($"/students/{studentId}/subjects/{subjectId}/placement", new PlacementSubmitRequest(answers), ct);
 
+    // ---------------------------------------------------------- Mock exams
+    public Task<ExamStartDto> StartExamAsync(Guid studentId, Guid subjectId, CancellationToken ct = default)
+        => PostAsync<ExamStartDto>($"/students/{studentId}/subjects/{subjectId}/exam/start", ct);
+
+    public Task<ExamResultDto> SubmitExamAsync(Guid studentId, Guid examId, IReadOnlyDictionary<string, string> answers, int elapsedSeconds, CancellationToken ct = default)
+        => PostAsync<ExamSubmitRequest, ExamResultDto>($"/students/{studentId}/exam/{examId}/submit", new ExamSubmitRequest(answers, elapsedSeconds), ct);
+
+    public Task<IReadOnlyList<ExamHistoryItemDto>> GetExamHistoryAsync(Guid studentId, CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<ExamHistoryItemDto>>($"/students/{studentId}/exams", ct);
+
     // -------------------------------------------------------------- Parent
     public Task<ParentDashboardDto> GetParentDashboardAsync(CancellationToken ct = default)
         => GetAsync<ParentDashboardDto>("/parents/dashboard", ct);
