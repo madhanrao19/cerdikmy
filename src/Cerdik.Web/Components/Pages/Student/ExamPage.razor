@@ -1,0 +1,291 @@
+@page "/student/exam"
+@implements IDisposable
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+@inject IUiText T
+
+<PageTitle>@T["student.exam.title"] — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
+        <h1 class="page-title">@T["student.exam.title"]</h1>
+        <p class="page-sub mb-6">@T["student.exam.sub"]</p>
+
+        @if (_result is not null)
+        {
+            <section class="card result" aria-live="polite">
+                <h2 class="card-title">@T["student.exam.result_title"]</h2>
+                <div class="grade-wrap">
+                    <span class="grade-badge grade-@GradeClass(_result.Grade)">@_result.Grade</span>
+                    <div>
+                        <p class="result-score">@_result.PercentScore%</p>
+                        <p class="result-meta">
+                            @string.Format(T["student.exam.score"], _result.CorrectCount, _result.QuestionCount)
+                            · @string.Format(T["student.exam.time_taken"], FormatTime(_result.DurationSeconds))
+                        </p>
+                    </div>
+                </div>
+                @if (_result.Standards.Count > 0)
+                {
+                    <ul class="result-standards">
+                        @foreach (var s in _result.Standards)
+                        {
+                            <li><span class="rs-code">@s.Code</span><span class="rs-band">@s.Band · @s.Percent%</span></li>
+                        }
+                    </ul>
+                }
+                <button class="btn-secondary mt-4" @onclick="Reset">@T["student.exam.retake"]</button>
+            </section>
+        }
+        else if (_exam is not null)
+        {
+            <section class="card">
+                <div class="exam-head">
+                    <h2 class="card-title">@_exam.SubjectName</h2>
+                    <span class="timer @(_remaining <= 30 ? "low" : "")" role="timer" aria-label="@T["student.exam.time_left"]">
+                        ⏱ @FormatTime(_remaining)
+                    </span>
+                </div>
+                <ol class="q-list">
+                    @foreach (var q in _exam.Questions)
+                    {
+                        <li class="q-item">
+                            <p class="q-prompt">@q.Prompt</p>
+                            @if (q.Options.Count > 0)
+                            {
+                                <div class="q-options">
+                                    @foreach (var opt in q.Options)
+                                    {
+                                        <button type="button" class="q-opt @(_answers.GetValueOrDefault(q.Key) == opt ? "active" : "")"
+                                                @onclick="() => SetAnswer(q.Key, opt)">@opt</button>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <input class="input" value="@_answers.GetValueOrDefault(q.Key)"
+                                       @oninput="e => SetAnswer(q.Key, e.Value?.ToString())" />
+                            }
+                        </li>
+                    }
+                </ol>
+                <button class="btn-primary mt-4" @onclick="() => SubmitAsync(false)" disabled="@_busy">
+                    @(_busy ? T["student.exam.submitting"] : T["student.exam.submit"])
+                </button>
+            </section>
+        }
+        else
+        {
+            <section class="card mb-6">
+                <h2 class="card-title">@T["student.exam.pick"]</h2>
+                @if (_loading)
+                {
+                    <p class="text-slate-500" role="status">@T["student.exam.loading"]</p>
+                }
+                else if (_error is not null)
+                {
+                    <p class="text-rose-700">@_error</p>
+                    <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
+                }
+                else
+                {
+                    <div class="subject-pills">
+                        @foreach (var s in _subjects)
+                        {
+                            <button type="button" class="subject-pill" @onclick="() => StartAsync(s.Id)">@s.Name</button>
+                        }
+                    </div>
+                }
+            </section>
+
+            <section class="card">
+                <h2 class="card-title">@T["student.exam.history"]</h2>
+                @if (_history.Count == 0)
+                {
+                    <p class="text-slate-500">@T["student.exam.no_history"]</p>
+                }
+                else
+                {
+                    <ul class="history-list">
+                        @foreach (var h in _history)
+                        {
+                            <li class="history-row">
+                                <span class="history-main">
+                                    <span class="history-subject">@h.SubjectName</span>
+                                    <span class="history-meta">@h.TakenAt.LocalDateTime.ToString("d MMM yyyy") · @h.PercentScore%</span>
+                                </span>
+                                <span class="grade-badge grade-@GradeClass(h.Grade)">@h.Grade</span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; max-width: 42rem; }
+    .card-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .subject-pills { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .subject-pill { border: 1px solid #cbd5e1; background: #fff; border-radius: 9999px; padding: .4rem 1rem; font-weight: 600; color: #334155; cursor: pointer; }
+    .subject-pill:hover { border-color: var(--brand-400); color: var(--brand-700); }
+    .exam-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .timer { font-weight: 800; font-size: 1.1rem; color: #0f766e; background: #f0fdfa; border: 1px solid #99f6e4; border-radius: 9999px; padding: .25rem .75rem; }
+    .timer.low { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .q-list { list-style: decimal; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .q-prompt { font-weight: 600; color: #1e293b; margin-bottom: .5rem; }
+    .q-options { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .q-opt { border: 1px solid #cbd5e1; background: #fff; border-radius: .55rem; padding: .4rem .9rem; cursor: pointer; color: #334155; }
+    .q-opt.active { border-color: var(--brand-500); background: var(--brand-50); color: var(--brand-700); font-weight: 700; }
+    .grade-wrap { display: flex; align-items: center; gap: 1rem; }
+    .grade-badge { font-size: 1.5rem; font-weight: 800; border-radius: .6rem; padding: .35rem .85rem; min-width: 2.5rem; text-align: center; }
+    .grade-a { background: #dcfce7; color: #166534; }
+    .grade-b { background: #e0f2fe; color: #075985; }
+    .grade-c { background: #fef9c3; color: #854d0e; }
+    .grade-d { background: #ffedd5; color: #9a3412; }
+    .grade-e { background: #fee2e2; color: #b91c1c; }
+    .result-score { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+    .result-meta { color: #64748b; font-size: .85rem; margin-top: .2rem; }
+    .result-standards { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+    .result-standards li { display: flex; justify-content: space-between; font-size: .85rem; border: 1px solid #f1f5f9; border-radius: .5rem; padding: .4rem .6rem; }
+    .rs-code { font-weight: 700; color: #1e293b; }
+    .rs-band { color: #64748b; }
+    .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+    .history-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; border: 1px solid #eef2f7; border-radius: .6rem; padding: .6rem .75rem; }
+    .history-main { display: flex; flex-direction: column; }
+    .history-subject { font-weight: 600; color: #1e293b; }
+    .history-meta { font-size: .78rem; color: #64748b; }
+    .history-row .grade-badge { font-size: 1rem; padding: .15rem .5rem; min-width: 2rem; }
+</style>
+
+@code {
+    private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
+    private IReadOnlyList<ExamHistoryItemDto> _history = Array.Empty<ExamHistoryItemDto>();
+    private ExamStartDto? _exam;
+    private ExamResultDto? _result;
+    private readonly Dictionary<string, string> _answers = new();
+    private bool _loading = true;
+    private bool _busy;
+    private string? _error;
+
+    private int _remaining;
+    private System.Threading.Timer? _timer;
+
+    private Guid? StudentId => Current.StudentId ?? Auth.User?.StudentId ?? Auth.Students.FirstOrDefault()?.Id;
+
+    protected override Task OnInitializedAsync()
+    {
+        Current.EnsureDefault(Auth.Students);
+        return LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            var student = Current.Student ?? Auth.Students.FirstOrDefault();
+            var filter = student is null
+                ? new CurriculumFilter()
+                : new CurriculumFilter(Level: student.Level, SchoolType: student.SchoolType,
+                    Language: student.PrimaryLanguage, DlpMode: student.DlpMode);
+            _subjects = await Api.GetSubjectsAsync(filter);
+            if (StudentId is { } sid) _history = await Api.GetExamHistoryAsync(sid);
+        }
+        catch (Exception)
+        {
+            _error = T["student.exam.error"];
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task StartAsync(Guid subjectId)
+    {
+        if (StudentId is not { } sid) return;
+        _error = null;
+        _answers.Clear();
+        try
+        {
+            _exam = await Api.StartExamAsync(sid, subjectId);
+            _remaining = _exam.DurationSeconds;
+            StartTimer();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = T["student.exam.error"];
+        }
+    }
+
+    private void StartTimer()
+    {
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            _remaining--;
+            if (_remaining <= 0)
+            {
+                await InvokeAsync(() => SubmitAsync(true));
+            }
+            else
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }, null, 1000, 1000);
+    }
+
+    private void SetAnswer(string key, string? value) => _answers[key] = value ?? "";
+
+    private async Task SubmitAsync(bool auto)
+    {
+        if (_busy || _exam is null) return;
+        _busy = true;
+        _timer?.Dispose();
+        _timer = null;
+        try
+        {
+            var elapsed = _exam.DurationSeconds - Math.Max(0, _remaining);
+            _result = await Api.SubmitExamAsync(StudentId!.Value, _exam.ExamId, _answers, elapsed);
+            _exam = null;
+        }
+        catch (Exception)
+        {
+            _error = T["student.exam.error"];
+        }
+        finally
+        {
+            _busy = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task Reset()
+    {
+        _result = null;
+        _exam = null;
+        _answers.Clear();
+        await LoadAsync();
+    }
+
+    private static string FormatTime(int seconds)
+    {
+        if (seconds < 0) seconds = 0;
+        return $"{seconds / 60:D2}:{seconds % 60:D2}";
+    }
+
+    private static string GradeClass(string grade) => grade.Length > 0
+        ? grade[0] switch { 'A' => "a", 'B' => "b", 'C' => "c", 'D' => "d", _ => "e" }
+        : "e";
+
+    public void Dispose() => _timer?.Dispose();
+}

@@ -85,6 +85,42 @@ public sealed record PlacementResultDto(
     MasteryBand RecommendedBand,
     IReadOnlyList<PlacementStandardScoreDto> Standards);
 
+// ---- Mock exam ----
+public sealed record ExamQuestionDto(string Key, string Prompt, QuestionType Type, IReadOnlyList<string> Options);
+
+public sealed record ExamStartDto(
+    Guid ExamId,
+    Guid SubjectId,
+    string SubjectName,
+    int DurationSeconds,
+    IReadOnlyList<ExamQuestionDto> Questions);
+
+public sealed record ExamSubmitRequest(IReadOnlyDictionary<string, string> Answers, int ElapsedSeconds);
+
+public sealed record ExamStandardScoreDto(string Code, string Strand, double Percent, MasteryBand Band);
+
+public sealed record ExamResultDto(
+    Guid ExamId,
+    Guid SubjectId,
+    string SubjectName,
+    int QuestionCount,
+    int CorrectCount,
+    double PercentScore,
+    MasteryBand Band,
+    string Grade,
+    int DurationSeconds,
+    IReadOnlyList<ExamStandardScoreDto> Standards);
+
+public sealed record ExamHistoryItemDto(
+    Guid ExamId,
+    Guid SubjectId,
+    string SubjectName,
+    double PercentScore,
+    string Grade,
+    MasteryBand Band,
+    int DurationSeconds,
+    DateTimeOffset TakenAt);
+
 // ---- Adaptive recommendations ----
 public enum RecommendationReason { Continue, Review, New }
 

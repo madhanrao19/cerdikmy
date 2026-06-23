@@ -161,6 +161,33 @@ public sealed class UiText : IUiText
         ["student.cta.tutor"] = T("💬 Ask the AI tutor", "💬 Tanya tutor AI", "💬 询问 AI 导师", "💬 AI ஆசிரியரிடம் கேளுங்கள்"),
         ["student.cta.progress"] = T("📈 See my progress", "📈 Lihat kemajuan saya", "📈 查看我的进度", "📈 எனது முன்னேற்றத்தைக் காண்க"),
         ["student.cta.placement"] = T("📋 Take a placement check", "📋 Buat ujian penempatan", "📋 进行分级测试", "📋 நிலை தேர்வை எடுக்கவும்"),
+        ["student.cta.exam"] = T("📝 Take a mock exam", "📝 Buat peperiksaan percubaan", "📝 进行模拟考试", "📝 மாதிரித் தேர்வை எடுக்கவும்"),
+
+        // Student — mock exam
+        ["student.exam.title"] = T("Mock exam", "Peperiksaan percubaan", "模拟考试", "மாதிரித் தேர்வு"),
+        ["student.exam.sub"] = T(
+            "A timed practice paper, exam-style.",
+            "Kertas latihan bermasa, gaya peperiksaan.",
+            "限时模拟试卷，考试形式。",
+            "நேரம் கட்டுப்படுத்தப்பட்ட தேர்வு பாணி பயிற்சித் தாள்."),
+        ["student.exam.pick"] = T("Choose a subject", "Pilih subjek", "选择科目", "ஒரு பாடத்தைத் தேர்வுசெய்க"),
+        ["student.exam.start"] = T("Start exam", "Mula peperiksaan", "开始考试", "தேர்வைத் தொடங்கு"),
+        ["student.exam.loading"] = T("Loading…", "Memuatkan…", "加载中…", "ஏற்றுகிறது…"),
+        ["student.exam.error"] = T(
+            "We couldn't load the exam. Please try again.",
+            "Kami tidak dapat memuatkan peperiksaan. Sila cuba lagi.",
+            "无法加载考试，请重试。",
+            "தேர்வை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["student.exam.time_left"] = T("Time left", "Masa berbaki", "剩余时间", "மீதமுள்ள நேரம்"),
+        ["student.exam.submit"] = T("Submit exam", "Hantar peperiksaan", "提交考试", "தேர்வைச் சமர்ப்பி"),
+        ["student.exam.submitting"] = T("Submitting…", "Menghantar…", "提交中…", "சமர்ப்பிக்கிறது…"),
+        ["student.exam.result_title"] = T("Exam result", "Keputusan peperiksaan", "考试结果", "தேர்வு முடிவு"),
+        ["student.exam.grade"] = T("Grade", "Gred", "等级", "தரம்"),
+        ["student.exam.score"] = T("{0} / {1} correct", "{0} / {1} betul", "{0} / {1} 正确", "{0} / {1} சரி"),
+        ["student.exam.time_taken"] = T("Time: {0}", "Masa: {0}", "用时：{0}", "நேரம்: {0}"),
+        ["student.exam.retake"] = T("Take another", "Ambil yang lain", "再考一次", "மற்றொன்றை எடு"),
+        ["student.exam.history"] = T("Past results", "Keputusan lepas", "历史成绩", "முந்தைய முடிவுகள்"),
+        ["student.exam.no_history"] = T("No past exams yet.", "Tiada peperiksaan lepas lagi.", "暂无历史考试。", "இன்னும் முந்தைய தேர்வுகள் இல்லை."),
 
         // Student — placement / diagnostic test
         ["student.placement.title"] = T("Placement check", "Ujian penempatan", "分级测试", "நிலைத் தேர்வு"),
