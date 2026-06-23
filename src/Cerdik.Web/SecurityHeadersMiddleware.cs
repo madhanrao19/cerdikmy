@@ -32,6 +32,8 @@ public sealed class SecurityHeadersMiddleware
             "style-src 'self' 'unsafe-inline'",
             "script-src 'self' 'wasm-unsafe-eval'",
             "connect-src 'self' ws: wss:",
+            "manifest-src 'self'",
+            "worker-src 'self'",
             "form-action 'self'");
     }
 

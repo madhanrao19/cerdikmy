@@ -1,0 +1,28 @@
+{
+  "name": "cerdikMY — Homeschooling & AI Tutor",
+  "short_name": "cerdikMY",
+  "description": "KPM-aligned homeschooling and AI tutoring for Malaysian families.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "lang": "ms",
+  "dir": "ltr",
+  "background_color": "#f6f8fc",
+  "theme_color": "#0f766e",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
