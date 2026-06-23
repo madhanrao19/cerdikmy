@@ -2,33 +2,34 @@
 @inject ApiClient Api
 @inject AuthStateService Auth
 @inject CurrentStudentState Current
+@inject IUiText T
 
-<PageTitle>AI Tutor — cerdikMY</PageTitle>
+<PageTitle>@T["student.tutor.title"] — cerdikMY</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
         <div class="page-head">
             <div>
-                <h1 class="page-title">AI Tutor</h1>
-                <p class="page-sub">A friendly tutor aligned to your KPM curriculum.</p>
+                <h1 class="page-title">@T["student.tutor.title"]</h1>
+                <p class="page-sub">@T["student.tutor.sub"]</p>
             </div>
             @if (_session is not null)
             {
                 <button class="btn-secondary no-print" @onclick="StartNewSessionAsync" disabled="@_starting">
-                    New conversation
+                    @T["student.tutor.new"]
                 </button>
             }
         </div>
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Starting your tutor session…</p>
+            <p class="text-slate-500" role="status">@T["student.tutor.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="StartNewSessionAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="StartNewSessionAsync">@T["common.retry"]</button>
             </div>
         }
         else if (_session is not null)
@@ -73,7 +74,7 @@
                 ?? Auth.Students.FirstOrDefault()?.Id;
             if (studentId is null)
             {
-                _error = "No student profile is linked to your account.";
+                _error = T["common.no_student"];
                 return;
             }
 
@@ -86,7 +87,7 @@
         }
         catch (Exception)
         {
-            _error = "We couldn't start a tutor session. Please try again.";
+            _error = T["student.tutor.error"];
         }
         finally
         {

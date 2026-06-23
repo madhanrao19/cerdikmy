@@ -2,25 +2,26 @@
 @inject ApiClient Api
 @inject AuthStateService Auth
 @inject CurrentStudentState Current
+@inject IUiText T
 
-<PageTitle>@(_lesson?.Title ?? "Lesson") — cerdikMY</PageTitle>
+<PageTitle>@(_lesson?.Title ?? T["student.lesson.title_fallback"]) — cerdikMY</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading lesson…</p>
+            <p class="text-slate-500" role="status">@T["student.lesson.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <a class="btn-secondary mt-4" href="/student">Back to home</a>
+                <a class="btn-secondary mt-4" href="/student">@T["student.lesson.back"]</a>
             </div>
         }
         else if (_lesson is not null)
         {
-            <a class="back-link no-print" href="/student">← Back to home</a>
+            <a class="back-link no-print" href="/student">← @T["student.lesson.back"]</a>
 
             <div class="lesson-layout">
                 <div class="lesson-main">
@@ -30,7 +31,7 @@
                 @if (_lesson.Activities.Count > 0)
                 {
                     <section class="lesson-activities" aria-labelledby="activities-h">
-                        <h2 id="activities-h" class="activities-title">Practice &amp; check your understanding</h2>
+                        <h2 id="activities-h" class="activities-title">@T["student.lesson.practice"]</h2>
 
                         <div class="activity-tabs no-print" role="tablist" aria-label="Activities">
                             @foreach (var (act, i) in _lesson.Activities.Select((a, i) => (a, i)))
@@ -50,13 +51,13 @@
                              aria-labelledby="@($"tab-{_selectedActivity}")">
                             @if (_activityLoading)
                             {
-                                <p class="text-slate-500" role="status">Loading activity…</p>
+                                <p class="text-slate-500" role="status">@T["student.lesson.activity_loading"]</p>
                             }
                             else if (_activityError is not null)
                             {
                                 <div class="card" role="alert">
                                     <p class="text-rose-700">@_activityError</p>
-                                    <button class="btn-secondary mt-4" @onclick="() => SelectActivity(_selectedActivity)">Retry</button>
+                                    <button class="btn-secondary mt-4" @onclick="() => SelectActivity(_selectedActivity)">@T["common.retry"]</button>
                                 </div>
                             }
                             else if (_activity is not null)
@@ -112,11 +113,11 @@
         }
         catch (ApiException ex)
         {
-            _error = ex.IsNotFound ? "We couldn't find this lesson." : ex.Message;
+            _error = ex.IsNotFound ? T["student.lesson.not_found"] : ex.Message;
         }
         catch (Exception)
         {
-            _error = "We couldn't load this lesson. Please try again.";
+            _error = T["student.lesson.error"];
         }
         finally
         {
@@ -143,7 +144,7 @@
         }
         catch (Exception)
         {
-            _activityError = "We couldn't load this activity. Please try again.";
+            _activityError = T["student.lesson.activity_error"];
         }
         finally
         {

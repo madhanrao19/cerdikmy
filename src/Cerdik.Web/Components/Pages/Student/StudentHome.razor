@@ -3,15 +3,16 @@
 @inject ApiClient Api
 @inject AuthStateService Auth
 @inject CurrentStudentState Current
+@inject IUiText T
 
-<PageTitle>Today — cerdikMY</PageTitle>
+<PageTitle>@T["nav.today"] — cerdikMY</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
         <div class="page-head">
             <div>
                 <h1 class="page-title">@Greeting</h1>
-                <p class="page-sub">Here's your learning for today.</p>
+                <p class="page-sub">@T["student.home.sub"]</p>
             </div>
             <div class="lang-toggle no-print" role="group" aria-label="Content language">
                 @foreach (var lang in new[] { Language.BM, Language.EN })
@@ -26,42 +27,42 @@
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading your day…</p>
+            <p class="text-slate-500" role="status">@T["student.home.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else
         {
             <section class="quick-stats" aria-label="Your progress">
                 <div class="qstat">
-                    <span class="qstat-label">Points</span>
+                    <span class="qstat-label">@T["student.stat.points"]</span>
                     <span class="qstat-value">@(_student?.Points ?? 0)</span>
                 </div>
                 <div class="qstat">
-                    <span class="qstat-label">Overall mastery</span>
+                    <span class="qstat-label">@T["student.stat.mastery"]</span>
                     <span class="qstat-value">@(_progress is null ? "—" : $"{MasteryPct(_progress.OverallMastery)}%")</span>
                 </div>
                 <div class="qstat">
-                    <span class="qstat-label">Lessons done</span>
+                    <span class="qstat-label">@T["student.stat.lessons_done"]</span>
                     <span class="qstat-value">@(_progress?.LessonsCompleted ?? 0)</span>
                 </div>
                 <div class="qstat">
-                    <span class="qstat-label">Badges</span>
+                    <span class="qstat-label">@T["student.stat.badges"]</span>
                     <span class="qstat-value">@(_progress?.Badges.Count ?? 0)</span>
                 </div>
             </section>
 
             <div class="home-grid">
                 <section class="card" aria-labelledby="subjects-h">
-                    <h2 id="subjects-h" class="card-title">Your subjects</h2>
+                    <h2 id="subjects-h" class="card-title">@T["student.subjects.title"]</h2>
                     @if (_subjects.Count == 0)
                     {
-                        <p class="text-slate-500">No subjects are available yet.</p>
+                        <p class="text-slate-500">@T["student.subjects.empty"]</p>
                     }
                     else
                     {
@@ -74,7 +75,7 @@
                                         <p class="subject-name">@s.Name</p>
                                         @if (prog is not null)
                                         {
-                                            <p class="subject-sub">@prog.LessonsCompleted / @prog.TotalLessons lessons</p>
+                                            <p class="subject-sub">@prog.LessonsCompleted / @prog.TotalLessons @T["common.lessons"]</p>
                                         }
                                     </div>
                                     @if (prog is not null)
@@ -85,21 +86,21 @@
                             }
                         </ul>
                     }
-                    <a class="btn-secondary mt-4" href="/student/progress">View detailed progress</a>
+                    <a class="btn-secondary mt-4" href="/student/progress">@T["student.view_progress"]</a>
                 </section>
 
                 <aside class="home-side">
                     <section class="card cta-card">
-                        <h2 class="card-title">Keep learning</h2>
-                        <p class="text-slate-600 mb-4">Practise with your AI tutor or jump back into a lesson.</p>
-                        <a class="btn-primary w-full" href="/student/tutor">💬 Ask the AI tutor</a>
-                        <a class="btn-secondary w-full mt-2" href="/student/progress">📈 See my progress</a>
+                        <h2 class="card-title">@T["student.cta.title"]</h2>
+                        <p class="text-slate-600 mb-4">@T["student.cta.sub"]</p>
+                        <a class="btn-primary w-full" href="/student/tutor">@T["student.cta.tutor"]</a>
+                        <a class="btn-secondary w-full mt-2" href="/student/progress">@T["student.cta.progress"]</a>
                     </section>
 
                     @if (_progress is { Badges.Count: > 0 })
                     {
                         <section class="card" aria-labelledby="badges-h">
-                            <h2 id="badges-h" class="card-title">Recent badges</h2>
+                            <h2 id="badges-h" class="card-title">@T["student.badges.recent"]</h2>
                             <ul class="badge-list">
                                 @foreach (var b in _progress.Badges.Take(5))
                                 {
@@ -150,7 +151,7 @@
     private bool _loading = true;
     private string? _error;
 
-    private string Greeting => $"Hi, {_student?.DisplayName ?? Auth.User?.FullName ?? "there"}!";
+    private string Greeting => string.Format(T["student.greeting"], _student?.DisplayName ?? Auth.User?.FullName ?? T["student.you"]);
 
     protected override async Task OnInitializedAsync()
     {
@@ -170,7 +171,7 @@
             var studentId = _student?.Id ?? Auth.User?.StudentId;
             if (studentId is null)
             {
-                _error = "No student profile is linked to your account.";
+                _error = T["common.no_student"];
                 return;
             }
 
@@ -188,7 +189,7 @@
         }
         catch (Exception)
         {
-            _error = "We couldn't load your home page. Please try again.";
+            _error = T["student.home.error"];
         }
         finally
         {

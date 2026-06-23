@@ -84,5 +84,111 @@ public sealed class UiText : IUiText
         ["auth.signin.busy"] = T("Signing in…", "Log masuk…", "正在登录…", "உள்நுழைகிறது…"),
         ["auth.signin.foot"] = T("New to cerdikMY?", "Baru di cerdikMY?", "初次使用 cerdikMY？", "cerdikMY-க்கு புதியவரா?"),
         ["auth.create"] = T("Create an account", "Cipta akaun", "创建账户", "கணக்கை உருவாக்கு"),
+
+        // Common (reused across pages)
+        ["common.retry"] = T("Retry", "Cuba lagi", "重试", "மீண்டும் முயற்சி"),
+        ["common.lessons"] = T("lessons", "pelajaran", "课", "பாடங்கள்"),
+        ["common.no_student"] = T(
+            "No student profile is linked to your account.",
+            "Tiada profil pelajar dikaitkan dengan akaun anda.",
+            "您的账户未关联学生档案。",
+            "உங்கள் கணக்குடன் மாணவர் சுயவிவரம் இணைக்கப்படவில்லை."),
+
+        // Student — shared
+        ["student.greeting"] = T("Hi, {0}!", "Hai, {0}!", "你好，{0}！", "வணக்கம், {0}!"),
+        ["student.you"] = T("there", "kawan", "同学", "நண்பரே"),
+
+        // Student — home/today
+        ["student.home.sub"] = T(
+            "Here's your learning for today.",
+            "Inilah pembelajaran anda untuk hari ini.",
+            "这是您今天的学习内容。",
+            "இன்றைக்கான உங்கள் கற்றல் இங்கே."),
+        ["student.home.loading"] = T("Loading your day…", "Memuatkan hari anda…", "正在加载今天的内容…", "உங்கள் நாளை ஏற்றுகிறது…"),
+        ["student.home.error"] = T(
+            "We couldn't load your home page. Please try again.",
+            "Kami tidak dapat memuatkan halaman utama anda. Sila cuba lagi.",
+            "无法加载您的主页，请重试。",
+            "உங்கள் முகப்புப் பக்கத்தை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["student.stat.points"] = T("Points", "Mata", "积分", "புள்ளிகள்"),
+        ["student.stat.mastery"] = T("Overall mastery", "Penguasaan keseluruhan", "总体掌握度", "மொத்த தேர்ச்சி"),
+        ["student.stat.lessons_done"] = T("Lessons done", "Pelajaran selesai", "已完成课程", "முடிந்த பாடங்கள்"),
+        ["student.stat.badges"] = T("Badges", "Lencana", "徽章", "பதக்கங்கள்"),
+        ["student.subjects.title"] = T("Your subjects", "Subjek anda", "您的科目", "உங்கள் பாடங்கள்"),
+        ["student.subjects.empty"] = T(
+            "No subjects are available yet.",
+            "Tiada subjek tersedia lagi.",
+            "暂无可用科目。",
+            "இன்னும் பாடங்கள் எதுவும் இல்லை."),
+        ["student.view_progress"] = T("View detailed progress", "Lihat kemajuan terperinci", "查看详细进度", "விரிவான முன்னேற்றத்தைக் காண்க"),
+        ["student.cta.title"] = T("Keep learning", "Teruskan belajar", "继续学习", "தொடர்ந்து கற்க"),
+        ["student.cta.sub"] = T(
+            "Practise with your AI tutor or jump back into a lesson.",
+            "Berlatih dengan tutor AI anda atau sambung semula pelajaran.",
+            "与 AI 导师一起练习，或回到课程中。",
+            "உங்கள் AI ஆசிரியருடன் பயிற்சி செய்யுங்கள் அல்லது பாடத்திற்குத் திரும்புங்கள்."),
+        ["student.cta.tutor"] = T("💬 Ask the AI tutor", "💬 Tanya tutor AI", "💬 询问 AI 导师", "💬 AI ஆசிரியரிடம் கேளுங்கள்"),
+        ["student.cta.progress"] = T("📈 See my progress", "📈 Lihat kemajuan saya", "📈 查看我的进度", "📈 எனது முன்னேற்றத்தைக் காண்க"),
+        ["student.badges.recent"] = T("Recent badges", "Lencana terbaru", "最近的徽章", "சமீபத்திய பதக்கங்கள்"),
+
+        // Student — progress
+        ["student.progress.title"] = T("My progress", "Kemajuan saya", "我的进度", "எனது முன்னேற்றம்"),
+        ["student.progress.sub"] = T(
+            "Track your mastery across subjects and your activity over time.",
+            "Pantau penguasaan anda merentas subjek dan aktiviti anda dari masa ke masa.",
+            "跟踪您各科目的掌握程度和长期活动情况。",
+            "பாடங்கள் முழுவதும் உங்கள் தேர்ச்சியையும் காலப்போக்கில் உங்கள் செயல்பாட்டையும் கண்காணிக்கவும்."),
+        ["student.progress.loading"] = T("Loading progress…", "Memuatkan kemajuan…", "正在加载进度…", "முன்னேற்றத்தை ஏற்றுகிறது…"),
+        ["student.progress.error"] = T(
+            "We couldn't load your progress. Please try again.",
+            "Kami tidak dapat memuatkan kemajuan anda. Sila cuba lagi.",
+            "无法加载您的进度，请重试。",
+            "உங்கள் முன்னேற்றத்தை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["student.progress.lessons_completed"] = T("Lessons completed", "Pelajaran selesai", "已完成课程", "முடிக்கப்பட்ட பாடங்கள்"),
+        ["student.progress.subjects"] = T("Subjects", "Subjek", "科目", "பாடங்கள்"),
+        ["student.progress.no_subjects"] = T("No subject data yet.", "Tiada data subjek lagi.", "暂无科目数据。", "இன்னும் பாட தரவு இல்லை."),
+        ["student.progress.activity"] = T("Activity", "Aktiviti", "活动", "செயல்பாடு"),
+        ["student.progress.awarded"] = T("Awarded {0}", "Dianugerahkan {0}", "获得于 {0}", "வழங்கப்பட்டது {0}"),
+
+        // Student — tutor
+        ["student.tutor.title"] = T("AI Tutor", "Tutor AI", "AI 导师", "AI ஆசிரியர்"),
+        ["student.tutor.sub"] = T(
+            "A friendly tutor aligned to your KPM curriculum.",
+            "Tutor mesra yang sejajar dengan kurikulum KPM anda.",
+            "贴合您 KPM 课程的友好导师。",
+            "உங்கள் KPM பாடத்திட்டத்துடன் இணைந்த நட்பான ஆசிரியர்."),
+        ["student.tutor.new"] = T("New conversation", "Perbualan baharu", "新对话", "புதிய உரையாடல்"),
+        ["student.tutor.loading"] = T("Starting your tutor session…", "Memulakan sesi tutor anda…", "正在开始导师会话…", "உங்கள் ஆசிரியர் அமர்வைத் தொடங்குகிறது…"),
+        ["student.tutor.error"] = T(
+            "We couldn't start a tutor session. Please try again.",
+            "Kami tidak dapat memulakan sesi tutor. Sila cuba lagi.",
+            "无法开始导师会话，请重试。",
+            "ஆசிரியர் அமர்வைத் தொடங்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+
+        // Student — lesson
+        ["student.lesson.title_fallback"] = T("Lesson", "Pelajaran", "课程", "பாடம்"),
+        ["student.lesson.loading"] = T("Loading lesson…", "Memuatkan pelajaran…", "正在加载课程…", "பாடத்தை ஏற்றுகிறது…"),
+        ["student.lesson.back"] = T("Back to home", "Kembali ke laman utama", "返回主页", "முகப்புக்குத் திரும்பு"),
+        ["student.lesson.error"] = T(
+            "We couldn't load this lesson. Please try again.",
+            "Kami tidak dapat memuatkan pelajaran ini. Sila cuba lagi.",
+            "无法加载此课程，请重试。",
+            "இந்தப் பாடத்தை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["student.lesson.not_found"] = T(
+            "We couldn't find this lesson.",
+            "Kami tidak dapat menemui pelajaran ini.",
+            "找不到此课程。",
+            "இந்தப் பாடத்தைக் கண்டுபிடிக்க முடியவில்லை."),
+        ["student.lesson.practice"] = T(
+            "Practice & check your understanding",
+            "Berlatih & semak kefahaman anda",
+            "练习并检查你的理解",
+            "பயிற்சி செய்து உங்கள் புரிதலைச் சரிபார்க்கவும்"),
+        ["student.lesson.activity_loading"] = T("Loading activity…", "Memuatkan aktiviti…", "正在加载活动…", "செயல்பாட்டை ஏற்றுகிறது…"),
+        ["student.lesson.activity_error"] = T(
+            "We couldn't load this activity. Please try again.",
+            "Kami tidak dapat memuatkan aktiviti ini. Sila cuba lagi.",
+            "无法加载此活动，请重试。",
+            "இந்தச் செயல்பாட்டை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
     };
 }

@@ -3,45 +3,46 @@
 @inject ApiClient Api
 @inject AuthStateService Auth
 @inject CurrentStudentState Current
+@inject IUiText T
 
-<PageTitle>Progress — cerdikMY</PageTitle>
+<PageTitle>@T["nav.progress"] — cerdikMY</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
-        <h1 class="page-title">My progress</h1>
-        <p class="page-sub mb-6">Track your mastery across subjects and your activity over time.</p>
+        <h1 class="page-title">@T["student.progress.title"]</h1>
+        <p class="page-sub mb-6">@T["student.progress.sub"]</p>
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading progress…</p>
+            <p class="text-slate-500" role="status">@T["student.progress.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else if (_progress is not null)
         {
             <section class="overview card" aria-label="Overall mastery">
                 <div>
-                    <p class="overview-label">Overall mastery</p>
+                    <p class="overview-label">@T["student.stat.mastery"]</p>
                     <p class="overview-value">@MasteryPct(_progress.OverallMastery)%</p>
                 </div>
                 <MasteryBadge Band="_progress.OverallBand" />
                 <div class="overview-lessons">
-                    <p class="overview-label">Lessons completed</p>
+                    <p class="overview-label">@T["student.progress.lessons_completed"]</p>
                     <p class="overview-value-sm">@_progress.LessonsCompleted / @_progress.TotalLessons</p>
                 </div>
             </section>
 
             <div class="progress-grid mt-6">
                 <section class="card" aria-labelledby="subjects-h">
-                    <h2 id="subjects-h" class="card-title">Subjects</h2>
+                    <h2 id="subjects-h" class="card-title">@T["student.progress.subjects"]</h2>
                     @if (_progress.Subjects.Count == 0)
                     {
-                        <p class="text-slate-500">No subject data yet.</p>
+                        <p class="text-slate-500">@T["student.progress.no_subjects"]</p>
                     }
                     else
                     {
@@ -57,7 +58,7 @@
                                          aria-valuenow="@MasteryPct(s.MasteryScore)" aria-label="@($"{s.SubjectName} mastery")">
                                         <span style="width:@MasteryPct(s.MasteryScore)%"></span>
                                     </div>
-                                    <p class="sp-meta">@s.LessonsCompleted / @s.TotalLessons lessons · @MasteryPct(s.MasteryScore)%</p>
+                                    <p class="sp-meta">@s.LessonsCompleted / @s.TotalLessons @T["common.lessons"] · @MasteryPct(s.MasteryScore)%</p>
                                 </li>
                             }
                         </ul>
@@ -66,18 +67,18 @@
 
                 <aside class="home-side">
                     <section class="card" aria-labelledby="activity-h">
-                        <h2 id="activity-h" class="card-title">Activity</h2>
+                        <h2 id="activity-h" class="card-title">@T["student.progress.activity"]</h2>
                         <ProgressHeatmap Cells="_progress.Heatmap" />
                     </section>
 
                     @if (_progress.Badges.Count > 0)
                     {
                         <section class="card" aria-labelledby="badges-h">
-                            <h2 id="badges-h" class="card-title">Badges</h2>
+                            <h2 id="badges-h" class="card-title">@T["student.stat.badges"]</h2>
                             <ul class="badge-grid">
                                 @foreach (var b in _progress.Badges)
                                 {
-                                    <li title="@($"Awarded {b.AwardedAt.LocalDateTime:d MMM yyyy}")">
+                                    <li title="@(string.Format(T["student.progress.awarded"], b.AwardedAt.LocalDateTime.ToString("d MMM yyyy")))">
                                         <span class="badge-icon" aria-hidden="true">@(b.Icon ?? "🏅")</span>
                                         <span class="badge-name">@b.Name</span>
                                     </li>
@@ -138,7 +139,7 @@
                 ?? Auth.Students.FirstOrDefault()?.Id;
             if (studentId is null)
             {
-                _error = "No student profile is linked to your account.";
+                _error = T["common.no_student"];
                 return;
             }
             _progress = await Api.GetStudentProgressAsync(studentId.Value);
@@ -149,7 +150,7 @@
         }
         catch (Exception)
         {
-            _error = "We couldn't load your progress. Please try again.";
+            _error = T["student.progress.error"];
         }
         finally
         {
