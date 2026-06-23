@@ -13,6 +13,7 @@
             <span aria-hidden="true">·</span>
             <span>@Lesson.Blocks.Count sections</span>
         </p>
+        <div class="lesson-actions"><ReadAloudButton Text="@ReadText()" /></div>
     </header>
 
     <div class="lesson-body">
@@ -35,9 +36,27 @@
     .lesson-title { font-size: 1.75rem; font-weight: 700; color: #0f172a; }
     .lesson-summary { margin-top: .5rem; color: #475569; font-size: 1.05rem; }
     .lesson-meta { display: flex; align-items: center; gap: .5rem; margin-top: .75rem; font-size: .85rem; color: #64748b; }
+    .lesson-actions { margin-top: .85rem; }
     .lesson-body { display: flex; flex-direction: column; gap: 1.5rem; }
 </style>
 
 @code {
     [Parameter, EditorRequired] public LessonDto Lesson { get; set; } = default!;
+
+    /// <summary>Plain-text version of the lesson for read-aloud: title, summary and each text block,
+    /// with light Markdown punctuation stripped so it isn't read out as symbols.</summary>
+    private string ReadText()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(Lesson.Title);
+        if (!string.IsNullOrWhiteSpace(Lesson.Summary)) sb.AppendLine(Lesson.Summary);
+        foreach (var b in Lesson.Blocks.OrderBy(x => x.SortOrder))
+        {
+            if (!string.IsNullOrWhiteSpace(b.Markdown)) sb.AppendLine(StripMarkdown(b.Markdown!));
+        }
+        return sb.ToString();
+    }
+
+    private static string StripMarkdown(string md) =>
+        System.Text.RegularExpressions.Regex.Replace(md, @"[#*_`>~\[\]()]|!\[|\]\(.*?\)", " ").Trim();
 }
