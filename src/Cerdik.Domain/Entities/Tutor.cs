@@ -82,6 +82,10 @@ public class ModerationEvent : BaseEntity
     public Guid? ReviewedByUserId { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
     public string? ReviewNotes { get; set; }
+
+    /// <summary>Set once the child's guardians have been emailed about a high-risk flag, so the
+    /// notification job doesn't alert them twice.</summary>
+    public DateTimeOffset? GuardianNotifiedAt { get; set; }
 }
 
 /// <summary>A retrievable, embedded chunk of approved lesson content (RAG corpus).
