@@ -171,7 +171,7 @@ public sealed class StudentsController : ControllerBase
 
         var records = await _db.ProgressRecords.AsNoTracking()
             .Where(p => p.StudentId == id)
-            .Select(p => new { p.LessonId, p.Completed, p.MasteryScore })
+            .Select(p => new { p.LessonId, p.Completed, p.MasteryScore, p.AttemptCount })
             .ToListAsync(ct);
         var byLesson = records.GroupBy(r => r.LessonId).ToDictionary(g => g.Key, g => g.First());
 
@@ -179,14 +179,16 @@ public sealed class StudentsController : ControllerBase
         foreach (var l in lessons)
         {
             byLesson.TryGetValue(l.Id, out var rec);
-            var started = rec is not null;
             var completed = rec?.Completed ?? false;
             var band = MasteryMath.ToBand(rec?.MasteryScore ?? 0);
             var target = l.TargetBand ?? MasteryBand.TP4;
+            // A placement baseline seeds a record with no attempts; only genuine attempt activity
+            // (AttemptCount > 0) counts as "in progress" so we don't loop the student back into it.
+            var inProgress = rec is not null && !completed && rec.AttemptCount > 0;
 
             RecommendationReason? reason;
             int priority;
-            if (started && !completed)
+            if (inProgress)
             {
                 reason = RecommendationReason.Continue; priority = 1;
             }
@@ -194,13 +196,13 @@ public sealed class StudentsController : ControllerBase
             {
                 reason = RecommendationReason.Review; priority = 2;
             }
-            else if (!started)
+            else if (!completed && (int)band < (int)target)
             {
                 reason = RecommendationReason.New; priority = 3;
             }
             else
             {
-                reason = null; priority = 0; // completed & at/above target — solidly done, skip.
+                reason = null; priority = 0; // completed-at-target, or placed out of it — skip.
             }
 
             if (reason is { } r)

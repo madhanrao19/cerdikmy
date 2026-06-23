@@ -51,16 +51,15 @@ public sealed class PlacementController : ControllerBase
     {
         await EnsureAccess(id, ct);
         var (_, lessons, questions) = await BuildAsync(id, subjectId, ct);
-        var byKey = questions.ToDictionary(q => q.Key);
 
-        // Grade per lesson.
-        var answered = 0;
+        // Grade EVERY assembled question — a skipped/blank answer counts as incorrect, so partial
+        // submissions can't inflate the score and over-place the student.
+        var total = questions.Count;
         var correct = 0;
         var perLesson = new Dictionary<Guid, (int Correct, int Total)>();
-        foreach (var (key, given) in req.Answers)
+        foreach (var q in questions)
         {
-            if (!byKey.TryGetValue(key, out var q)) continue;
-            answered++;
+            req.Answers.TryGetValue(q.Key, out var given);
             var isCorrect = string.Equals((given ?? "").Trim(), q.CorrectAnswer.Trim(), StringComparison.OrdinalIgnoreCase);
             if (isCorrect) correct++;
             var agg = perLesson.GetValueOrDefault(q.LessonId);
@@ -88,9 +87,11 @@ public sealed class PlacementController : ControllerBase
         }
         await _db.SaveChangesAsync(ct);
 
-        // Per-standard roll-up.
+        // Per-standard roll-up — only over lessons that actually contributed questions, so untested
+        // standards (beyond the question cap) aren't reported as 0%/TP1.
+        var askedLessonIds = perLesson.Keys.ToHashSet();
         var standards = lessons
-            .Where(l => l.StandardCode is not null)
+            .Where(l => l.StandardCode is not null && askedLessonIds.Contains(l.Id))
             .GroupBy(l => (l.StandardCode!, l.Strand ?? ""))
             .Select(g =>
             {
@@ -102,8 +103,8 @@ public sealed class PlacementController : ControllerBase
             .OrderBy(s => s.Code)
             .ToList();
 
-        var overall = answered == 0 ? 0 : Math.Round(correct * 100.0 / answered, 1);
-        return Ok(new PlacementResultDto(subjectId, answered, correct, overall, MasteryMath.ToBand(overall), standards));
+        var overall = total == 0 ? 0 : Math.Round(correct * 100.0 / total, 1);
+        return Ok(new PlacementResultDto(subjectId, total, correct, overall, MasteryMath.ToBand(overall), standards));
     }
 
     // ---- assembly shared by GET (questions) and POST (grading) ----
