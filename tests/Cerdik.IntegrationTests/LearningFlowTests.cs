@@ -140,6 +140,27 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Standards_mastery_returns_each_standard_with_a_status()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid studentId, subjectId;
+        using (var db = _factory.NewDbContext())
+        {
+            studentId = (await db.Students.FirstAsync(s => s.DisplayName == "Aisyah")).Id;
+            subjectId = await db.LearningStandards.Select(s => s.SubjectId).FirstAsync();
+        }
+
+        var resp = await client.GetAsync($"/students/{studentId}/subjects/{subjectId}/standards-mastery");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var map = await resp.Content.ReadFromJsonAsync<SubjectStandardsMasteryDto>(TestJson.Options);
+        map!.SubjectId.Should().Be(subjectId);
+        map.Standards.Should().NotBeEmpty("the seeded subject defines learning standards");
+        map.Standards.Should().OnlyContain(s => !string.IsNullOrEmpty(s.Code));
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();

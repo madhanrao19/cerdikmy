@@ -181,6 +181,26 @@ public sealed class UiText : IUiText
         ["student.progress.activity"] = T("Activity", "Aktiviti", "活动", "செயல்பாடு"),
         ["student.progress.awarded"] = T("Awarded {0}", "Dianugerahkan {0}", "获得于 {0}", "வழங்கப்பட்டது {0}"),
 
+        // Student — per-standard mastery gap map
+        ["student.standards.view"] = T("View standards", "Lihat standard", "查看标准", "தரநிலைகளைக் காண்க"),
+        ["student.standards.hide"] = T("Hide standards", "Sembunyi standard", "隐藏标准", "தரநிலைகளை மறை"),
+        ["student.standards.loading"] = T("Loading standards…", "Memuatkan standard…", "正在加载标准…", "தரநிலைகளை ஏற்றுகிறது…"),
+        ["student.standards.error"] = T(
+            "We couldn't load standards. Please try again.",
+            "Kami tidak dapat memuatkan standard. Sila cuba lagi.",
+            "无法加载标准，请重试。",
+            "தரநிலைகளை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["student.standards.empty"] = T(
+            "No standards defined for this subject yet.",
+            "Tiada standard ditakrifkan untuk subjek ini lagi.",
+            "此科目尚未定义标准。",
+            "இந்தப் பாடத்திற்கு இன்னும் தரநிலைகள் வரையறுக்கப்படவில்லை."),
+        ["student.standards.mastered"] = T("Mastered", "Dikuasai", "已掌握", "தேர்ச்சி பெற்றது"),
+        ["student.standards.developing"] = T("Developing", "Sedang berkembang", "发展中", "வளர்ந்து வருகிறது"),
+        ["student.standards.not_started"] = T("Not started", "Belum dimulakan", "未开始", "தொடங்கவில்லை"),
+        ["student.standards.target"] = T("Target {0}", "Sasaran {0}", "目标 {0}", "இலக்கு {0}"),
+        ["student.standards.practise"] = T("Practise", "Berlatih", "练习", "பயிற்சி"),
+
         // Student — tutor
         ["student.tutor.title"] = T("AI Tutor", "Tutor AI", "AI 导师", "AI ஆசிரியர்"),
         ["student.tutor.sub"] = T(

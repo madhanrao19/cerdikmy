@@ -43,6 +43,29 @@ public sealed record SubjectProgressDto(
 /// <summary>One day in the activity heatmap.</summary>
 public sealed record ProgressHeatCell(DateOnly Date, int Count, int Minutes);
 
+// ---- Per-standard mastery gap map ----
+public enum StandardMasteryStatus { NotStarted, Developing, Mastered }
+
+/// <summary>A learning standard with the student's mastery against its KPM target band, plus a
+/// remediation link (the next incomplete lesson mapped to that standard).</summary>
+public sealed record StandardMasteryDto(
+    Guid StandardId,
+    string Code,
+    string Strand,
+    string Description,
+    MasteryBand TargetBand,
+    double Mastery,
+    MasteryBand Band,
+    int LessonsCompleted,
+    int TotalLessons,
+    StandardMasteryStatus Status,
+    Guid? NextLessonId);
+
+public sealed record SubjectStandardsMasteryDto(
+    Guid SubjectId,
+    string SubjectName,
+    IReadOnlyList<StandardMasteryDto> Standards);
+
 public sealed record BadgeDto(string Code, string Name, string? Icon, DateTimeOffset AwardedAt);
 
 // ---- Parent dashboard ----
