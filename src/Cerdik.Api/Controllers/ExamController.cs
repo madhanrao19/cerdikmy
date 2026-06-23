@@ -92,7 +92,7 @@ public sealed class ExamController : ControllerBase
 
             if (q.StandardCode is { } code)
             {
-                var agg = perStandard.GetValueOrDefault(code, (q.Strand ?? "", 0, 0));
+                var agg = perStandard.GetValueOrDefault(code, (Strand: q.Strand ?? "", Correct: 0, Total: 0));
                 perStandard[code] = (agg.Strand, agg.Correct + (isCorrect ? 1 : 0), agg.Total + 1);
             }
         }
