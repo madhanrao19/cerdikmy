@@ -220,6 +220,9 @@ public sealed class ApiClient
     public Task<CheckoutSessionDto> CreateCheckoutSessionAsync(CheckoutSessionRequest request, CancellationToken ct = default)
         => PostAsync<CheckoutSessionRequest, CheckoutSessionDto>("/billing/checkout-session", request, ct);
 
+    public Task<PromoValidationDto> ValidatePromoAsync(string code, CancellationToken ct = default)
+        => PostAsync<ValidatePromoRequest, PromoValidationDto>("/billing/promo/validate", new ValidatePromoRequest(code), ct);
+
     // ------------------------------------------------------------- Privacy
     public Task<PrivacyRequestDto> RequestPrivacyExportAsync(Guid? studentId, CancellationToken ct = default)
         => PostAsync<PrivacyExportRequest, PrivacyRequestDto>("/privacy/export", new PrivacyExportRequest(studentId), ct);

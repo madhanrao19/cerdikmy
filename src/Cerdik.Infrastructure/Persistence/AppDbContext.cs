@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<ModerationEvent> ModerationEvents => Set<ModerationEvent>();
     public DbSet<EmbeddingChunk> EmbeddingChunks => Set<EmbeddingChunk>();
 
+    public DbSet<PromoCode> PromoCodes => Set<PromoCode>();
     public DbSet<Subscription> Subscriptions => Set<Subscription>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
     public DbSet<Payment> Payments => Set<Payment>();
@@ -301,7 +302,14 @@ public class AppDbContext : DbContext
         b.Entity<Subscription>(e =>
         {
             e.HasIndex(x => x.HouseholdId);
+            e.Property(x => x.PromoCode).HasMaxLength(40);
             e.HasOne(x => x.Household).WithMany(h => h.Subscriptions).HasForeignKey(x => x.HouseholdId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<PromoCode>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.Code).HasMaxLength(40);
         });
 
         b.Entity<Invoice>(e =>

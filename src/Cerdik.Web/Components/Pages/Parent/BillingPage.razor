@@ -85,6 +85,23 @@
             }
 
             <h2 class="section-title mt-8">Available plans</h2>
+
+            <div class="promo-row">
+                <input class="input promo-input" placeholder="Promo or gift code" aria-label="Promo or gift code"
+                       value="@_promoInput" @oninput="e => _promoInput = e.Value?.ToString() ?? string.Empty" />
+                <button class="btn-secondary" @onclick="ApplyPromoAsync" disabled="@(_promoBusy || string.IsNullOrWhiteSpace(_promoInput))">
+                    @(_promoBusy ? "Checking…" : "Apply")
+                </button>
+            </div>
+            @if (_promoDiscount > 0)
+            {
+                <p class="promo-ok" role="status">✓ @_promoDiscount% discount will be applied at checkout.</p>
+            }
+            else if (_promoError is not null)
+            {
+                <p class="promo-err" role="alert">@_promoError</p>
+            }
+
             @if (_checkoutError is not null)
             {
                 <p class="text-rose-700 mb-3" role="alert">@_checkoutError</p>
@@ -121,6 +138,10 @@
     .data-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
     .data-table th { text-align: left; font-weight: 600; color: #475569; background: #f8fafc; padding: .6rem .85rem; border-bottom: 1px solid #e2e8f0; }
     .data-table td { padding: .6rem .85rem; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .promo-row { display: flex; gap: .5rem; max-width: 24rem; margin-bottom: .5rem; }
+    .promo-input { flex: 1 1 auto; }
+    .promo-ok { color: #047857; font-weight: 600; font-size: .85rem; margin-bottom: .75rem; }
+    .promo-err { color: #b91c1c; font-weight: 600; font-size: .85rem; margin-bottom: .75rem; }
     .plans-grid { display: grid; grid-template-columns: 1fr; gap: 1.25rem; }
     @@media (min-width: 768px) { .plans-grid { grid-template-columns: repeat(3, 1fr); } }
 </style>
@@ -132,6 +153,46 @@
     private string? _error;
     private string? _checkoutError;
     private string? _checkoutPlan;
+
+    private string _promoInput = "";
+    private string? _appliedPromo;
+    private int _promoDiscount;
+    private bool _promoBusy;
+    private string? _promoError;
+
+    private async Task ApplyPromoAsync()
+    {
+        _promoBusy = true;
+        _promoError = null;
+        _promoDiscount = 0;
+        _appliedPromo = null;
+        try
+        {
+            var result = await Api.ValidatePromoAsync(_promoInput.Trim());
+            if (result.Valid)
+            {
+                _appliedPromo = _promoInput.Trim();
+                _promoDiscount = result.DiscountPercent;
+            }
+            else
+            {
+                _promoError = result.Reason switch
+                {
+                    "expired" => "That code has expired.",
+                    "exhausted" => "That code has reached its redemption limit.",
+                    _ => "That code isn't valid.",
+                };
+            }
+        }
+        catch (Exception)
+        {
+            _promoError = "We couldn't check that code. Please try again.";
+        }
+        finally
+        {
+            _promoBusy = false;
+        }
+    }
 
     protected override Task OnInitializedAsync() => LoadAsync();
 
@@ -169,7 +230,7 @@
                 ?? throw new InvalidOperationException("No household is associated with your account.");
             var returnUrl = new Uri(new Uri(Nav.BaseUri), "/parent/billing").ToString();
             var session = await Api.CreateCheckoutSessionAsync(
-                new CheckoutSessionRequest(householdId, plan.Code, returnUrl));
+                new CheckoutSessionRequest(householdId, plan.Code, returnUrl, _appliedPromo));
             Nav.NavigateTo(session.CheckoutUrl, forceLoad: true);
         }
         catch (ApiException ex)

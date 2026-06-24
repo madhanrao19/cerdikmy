@@ -1,4 +1,5 @@
 using Cerdik.Application.Abstractions;
+using Cerdik.Application.Billing;
 using Cerdik.Application.Dtos;
 using Cerdik.Domain;
 using Cerdik.Domain.Entities;
@@ -40,6 +41,16 @@ public sealed class BillingController : ControllerBase
     [AllowAnonymous]
     public ActionResult<IReadOnlyList<BillingPlanDto>> GetPlans() => Ok(Plans);
 
+    /// <summary>Validate a promo/gift code without redeeming it (for the checkout UI).</summary>
+    [HttpPost("/billing/promo/validate")]
+    public async Task<ActionResult<PromoValidationDto>> ValidatePromo([FromBody] ValidatePromoRequest req, CancellationToken ct)
+    {
+        var code = PromoEvaluation.Normalize(req.Code ?? "");
+        var promo = await _db.PromoCodes.FirstOrDefaultAsync(p => p.Code == code, ct);
+        var (valid, discount, reason) = PromoEvaluation.Evaluate(promo, DateTimeOffset.UtcNow);
+        return Ok(new PromoValidationDto(valid, discount, reason));
+    }
+
     [HttpPost("/billing/checkout-session")]
     public async Task<ActionResult<CheckoutSessionDto>> Checkout([FromBody] CheckoutSessionRequest req, CancellationToken ct)
     {
@@ -52,12 +63,24 @@ public sealed class BillingController : ControllerBase
             if (!member) throw ApiException.Forbidden("You don't belong to this household.");
         }
 
+        // Apply a promo code if supplied (a supplied-but-invalid code is rejected so the user knows).
+        var amountCents = plan.AmountCents;
+        PromoCode? appliedPromo = null;
+        if (!string.IsNullOrWhiteSpace(req.PromoCode))
+        {
+            var pcode = PromoEvaluation.Normalize(req.PromoCode);
+            appliedPromo = await _db.PromoCodes.FirstOrDefaultAsync(p => p.Code == pcode, ct);
+            var (valid, discount, _) = PromoEvaluation.Evaluate(appliedPromo, DateTimeOffset.UtcNow);
+            if (!valid) throw ApiException.BadRequest("This promo code can't be applied.", "invalid_promo");
+            amountCents = (int)Math.Round(plan.AmountCents * (100 - discount) / 100.0);
+        }
+
         var email = _current.Email ?? "billing@cerdik.my";
         var providerEnum = Enum.TryParse<PaymentProvider>(_opt.Provider, ignoreCase: true, out var pe) ? pe : PaymentProvider.Billplz;
         var provider = _payments.Resolve(providerEnum);
 
         var session = await provider.CreateCheckoutSessionAsync(
-            new CheckoutRequest(household.Id, plan.Code, plan.AmountCents, plan.Currency, email, req.ReturnUrl), ct);
+            new CheckoutRequest(household.Id, plan.Code, amountCents, plan.Currency, email, req.ReturnUrl), ct);
 
         // Persist the checkout -> subscription mapping NOW so the webhook can resolve the exact
         // household by ProviderSubscriptionId, never a global "newest row" guess. One subscription
@@ -73,10 +96,14 @@ public sealed class BillingController : ControllerBase
         subscription.PlanCode = plan.Code;
         subscription.PlanName = plan.Name;
         subscription.Currency = plan.Currency;
-        subscription.AmountCents = plan.AmountCents;
+        subscription.AmountCents = amountCents;
         subscription.SeatLimit = plan.SeatLimit;
         subscription.Provider = providerEnum;
         subscription.ProviderSubscriptionId = session.ProviderSessionId;
+        // Record the promo on the subscription; it's actually redeemed (counted) only when payment
+        // succeeds, so abandoning checkout can't exhaust a limited code.
+        subscription.PromoCode = appliedPromo?.Code;
+        if (appliedPromo is not null) subscription.PromoRedeemed = false;
         await _db.SaveChangesAsync(ct);
 
         return Ok(new CheckoutSessionDto(providerEnum.ToString(), session.CheckoutUrl, session.ProviderSessionId));

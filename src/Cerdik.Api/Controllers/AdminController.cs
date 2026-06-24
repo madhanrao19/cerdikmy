@@ -68,6 +68,43 @@ public sealed class AdminController : ControllerBase
         return Ok(new AdminUserDto(user.Id, user.Email, user.FullName, user.Role, user.IsActive, user.HouseholdId, user.CreatedAt, user.LastLoginAt));
     }
 
+    // ---- Promo / gift codes (platform admins only) ----
+    [HttpGet("promo-codes")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<IReadOnlyList<PromoCodeDto>>> PromoCodes(CancellationToken ct)
+    {
+        var codes = await _db.PromoCodes.AsNoTracking()
+            .OrderByDescending(p => p.CreatedAt).Take(200)
+            .Select(p => new PromoCodeDto(p.Id, p.Code, p.DiscountPercent, p.MaxRedemptions, p.RedemptionCount, p.ExpiresAt, p.IsActive))
+            .ToListAsync(ct);
+        return Ok(codes);
+    }
+
+    [HttpPost("promo-codes")]
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult<PromoCodeDto>> CreatePromoCode([FromBody] CreatePromoCodeRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Code)) throw ApiException.BadRequest("Code is required.", "code_required");
+        if (req.DiscountPercent is < 1 or > 100) throw ApiException.BadRequest("Discount must be 1–100%.", "bad_discount");
+
+        var code = Cerdik.Application.Billing.PromoEvaluation.Normalize(req.Code);
+        if (await _db.PromoCodes.AnyAsync(p => p.Code == code, ct)) throw ApiException.Conflict("That code already exists.");
+
+        var promo = new PromoCode
+        {
+            Code = code,
+            DiscountPercent = req.DiscountPercent,
+            MaxRedemptions = Math.Max(0, req.MaxRedemptions),
+            ExpiresAt = req.ExpiresAt,
+            IsActive = true,
+        };
+        _db.PromoCodes.Add(promo);
+        await Audit("promo.create", "PromoCode", promo.Id.ToString(), ct);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new PromoCodeDto(promo.Id, promo.Code, promo.DiscountPercent, promo.MaxRedemptions, promo.RedemptionCount, promo.ExpiresAt, promo.IsActive));
+    }
+
     // ---- Content ----
     [HttpGet("content")]
     public async Task<ActionResult<IReadOnlyList<AdminContentItemDto>>> Content([FromQuery] PublishState? state, CancellationToken ct)

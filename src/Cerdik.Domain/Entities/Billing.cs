@@ -2,6 +2,19 @@ using Cerdik.Domain.Common;
 
 namespace Cerdik.Domain.Entities;
 
+/// <summary>A discount/gift code applied at checkout.</summary>
+public class PromoCode : BaseEntity
+{
+    /// <summary>Stored upper-cased; matched case-insensitively.</summary>
+    public string Code { get; set; } = default!;
+    public int DiscountPercent { get; set; }
+    /// <summary>0 = unlimited.</summary>
+    public int MaxRedemptions { get; set; }
+    public int RedemptionCount { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
 /// <summary>A household subscription to a plan.</summary>
 public class Subscription : BaseEntity
 {
@@ -22,6 +35,10 @@ public class Subscription : BaseEntity
 
     public PaymentProvider Provider { get; set; } = PaymentProvider.Billplz;
     public string? ProviderSubscriptionId { get; set; }
+
+    /// <summary>Promo code applied at checkout; redeemed (counted) only once payment succeeds.</summary>
+    public string? PromoCode { get; set; }
+    public bool PromoRedeemed { get; set; }
 
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
