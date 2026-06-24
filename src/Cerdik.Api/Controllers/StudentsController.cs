@@ -253,7 +253,8 @@ public sealed class StudentsController : ControllerBase
 
         var weekAgo = DateTimeOffset.UtcNow.AddDays(-7);
         var activeLast7 = await _db.Attempts.AnyAsync(a => a.StudentId == id && a.SubmittedAt >= weekAgo, ct)
-            || await _db.ProgressRecords.AnyAsync(p => p.StudentId == id && p.LastActivityAt >= weekAgo, ct);
+            || await _db.ProgressRecords.AnyAsync(p => p.StudentId == id && p.LastActivityAt >= weekAgo, ct)
+            || await _db.ExamAttempts.AnyAsync(e => e.StudentId == id && e.SubmittedAt >= weekAgo, ct);
 
         var openFlags = await _db.ModerationEvents.CountAsync(m => m.InterventionRaised && m.ReviewedAt == null
             && _db.TutorSessions.Any(t => t.Id == m.TutorSessionId && t.StudentId == id), ct);
