@@ -172,6 +172,12 @@ public sealed class ApiClient
     public Task<AdminUserDto> CreateAdminUserAsync(CreateAdminUserRequest request, CancellationToken ct = default)
         => PostAsync<CreateAdminUserRequest, AdminUserDto>("/admin/users", request, ct);
 
+    public Task<IReadOnlyList<PromoCodeDto>> GetPromoCodesAsync(CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<PromoCodeDto>>("/admin/promo-codes", ct);
+
+    public Task<PromoCodeDto> CreatePromoCodeAsync(CreatePromoCodeRequest request, CancellationToken ct = default)
+        => PostAsync<CreatePromoCodeRequest, PromoCodeDto>("/admin/promo-codes", request, ct);
+
     public Task<IReadOnlyList<AdminContentItemDto>> GetAdminContentAsync(CancellationToken ct = default)
         => GetAsync<IReadOnlyList<AdminContentItemDto>>("/admin/content", ct);
 
