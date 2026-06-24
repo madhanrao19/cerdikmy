@@ -1,6 +1,14 @@
 @inherits LayoutComponentBase
+@inject IUiText T
 
 <div class="min-h-screen">
-    <a href="#main-content" class="sr-only">Skip to main content</a>
+    <a href="#main-content" class="skip-link">@T["a11y.skip"]</a>
     @Body
 </div>
+
+<style>
+    /* Off-screen until focused, then visible — a real keyboard skip link (not sr-only). */
+    .skip-link { position: absolute; left: .5rem; top: -3rem; z-index: 50; background: #0f766e; color: #fff;
+        padding: .5rem .9rem; border-radius: .5rem; font-weight: 700; font-size: .85rem; transition: top .15s ease; }
+    .skip-link:focus { top: .5rem; outline: 2px solid #fff; outline-offset: 2px; }
+</style>
