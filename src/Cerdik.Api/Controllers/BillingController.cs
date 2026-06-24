@@ -100,7 +100,10 @@ public sealed class BillingController : ControllerBase
         subscription.SeatLimit = plan.SeatLimit;
         subscription.Provider = providerEnum;
         subscription.ProviderSubscriptionId = session.ProviderSessionId;
-        if (appliedPromo is not null) appliedPromo.RedemptionCount += 1;
+        // Record the promo on the subscription; it's actually redeemed (counted) only when payment
+        // succeeds, so abandoning checkout can't exhaust a limited code.
+        subscription.PromoCode = appliedPromo?.Code;
+        if (appliedPromo is not null) subscription.PromoRedeemed = false;
         await _db.SaveChangesAsync(ct);
 
         return Ok(new CheckoutSessionDto(providerEnum.ToString(), session.CheckoutUrl, session.ProviderSessionId));

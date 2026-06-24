@@ -36,6 +36,10 @@ public class Subscription : BaseEntity
     public PaymentProvider Provider { get; set; } = PaymentProvider.Billplz;
     public string? ProviderSubscriptionId { get; set; }
 
+    /// <summary>Promo code applied at checkout; redeemed (counted) only once payment succeeds.</summary>
+    public string? PromoCode { get; set; }
+    public bool PromoRedeemed { get; set; }
+
     public ICollection<Invoice> Invoices { get; set; } = new List<Invoice>();
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 }

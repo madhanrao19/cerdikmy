@@ -83,6 +83,18 @@ public sealed class WebhooksController : ControllerBase
             {
                 subscription.Status = SubscriptionStatus.Active;
                 subscription.CurrentPeriodEnd = DateTimeOffset.UtcNow.AddMonths(1);
+
+                // Redeem the promo now (not at checkout), so an abandoned/failed checkout can't burn
+                // a limited code. The conditional UPDATE is atomic at the DB, so concurrent payments
+                // can't oversell the count; PromoRedeemed keeps it idempotent across webhook retries.
+                if (subscription.PromoCode is { } promo && !subscription.PromoRedeemed)
+                {
+                    await _db.PromoCodes
+                        .Where(p => p.Code == promo && p.IsActive && p.DeletedAt == null
+                                    && (p.MaxRedemptions == 0 || p.RedemptionCount < p.MaxRedemptions))
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.RedemptionCount, x => x.RedemptionCount + 1), ct);
+                    subscription.PromoRedeemed = true;
+                }
             }
             else if (evt.Status == PaymentStatus.Failed)
             {

@@ -302,6 +302,7 @@ public class AppDbContext : DbContext
         b.Entity<Subscription>(e =>
         {
             e.HasIndex(x => x.HouseholdId);
+            e.Property(x => x.PromoCode).HasMaxLength(40);
             e.HasOne(x => x.Household).WithMany(h => h.Subscriptions).HasForeignKey(x => x.HouseholdId).OnDelete(DeleteBehavior.Cascade);
         });
 
