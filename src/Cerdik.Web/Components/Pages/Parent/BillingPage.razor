@@ -2,23 +2,24 @@
 @inject ApiClient Api
 @inject AuthStateService Auth
 @inject NavigationManager Nav
+@inject IUiText T
 
-<PageTitle>Billing — cerdikMY</PageTitle>
+<PageTitle>@T["billing.title"] — cerdikMY</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Parent })">
-        <h1 class="page-title">Billing & subscription</h1>
-        <p class="page-sub mb-6">Manage your plan, view invoices and upgrade your household.</p>
+        <h1 class="page-title">@T["billing.title"]</h1>
+        <p class="page-sub mb-6">@T["billing.sub"]</p>
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading billing…</p>
+            <p class="text-slate-500" role="status">@T["billing.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else
@@ -31,7 +32,7 @@
                             <h2 class="sub-plan">@_subscription.PlanName</h2>
                             <p class="sub-meta">
                                 @BillingPlanCard.FormatPrice(_subscription.AmountCents, _subscription.Currency)
-                                · renews @_subscription.CurrentPeriodEnd.LocalDateTime.ToString("d MMM yyyy")
+                                · @string.Format(T["billing.renews"], _subscription.CurrentPeriodEnd.LocalDateTime.ToString("d MMM yyyy"))
                             </p>
                         </div>
                         <span class="sub-status status-@_subscription.Status.ToString().ToLowerInvariant()">
@@ -40,10 +41,10 @@
                     </div>
                 </section>
 
-                <h2 class="section-title mt-8">Invoices</h2>
+                <h2 class="section-title mt-8">@T["billing.invoices"]</h2>
                 @if (_subscription.Invoices.Count == 0)
                 {
-                    <p class="text-slate-500">No invoices yet.</p>
+                    <p class="text-slate-500">@T["billing.no_invoices"]</p>
                 }
                 else
                 {
@@ -51,8 +52,8 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Number</th><th>Status</th><th>Amount</th>
-                                    <th>Issued</th><th>Paid</th><th><span class="sr-only">Actions</span></th>
+                                    <th>@T["billing.col.number"]</th><th>@T["billing.col.status"]</th><th>@T["billing.col.amount"]</th>
+                                    <th>@T["billing.col.issued"]</th><th>@T["billing.col.paid"]</th><th><span class="sr-only">@T["billing.col.actions"]</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -67,7 +68,7 @@
                                         <td>
                                             @if (!string.IsNullOrWhiteSpace(inv.HostedUrl))
                                             {
-                                                <a class="text-brand-600" href="@inv.HostedUrl" target="_blank" rel="noopener">View</a>
+                                                <a class="text-brand-600" href="@inv.HostedUrl" target="_blank" rel="noopener">@T["billing.view"]</a>
                                             }
                                         </td>
                                     </tr>
@@ -80,22 +81,22 @@
             else
             {
                 <div class="card" role="note">
-                    <p>You don't have an active subscription. Choose a plan below to get started.</p>
+                    <p>@T["billing.no_subscription"]</p>
                 </div>
             }
 
-            <h2 class="section-title mt-8">Available plans</h2>
+            <h2 class="section-title mt-8">@T["billing.plans"]</h2>
 
             <div class="promo-row">
-                <input class="input promo-input" placeholder="Promo or gift code" aria-label="Promo or gift code"
+                <input class="input promo-input" placeholder="@T["billing.promo_placeholder"]" aria-label="@T["billing.promo_placeholder"]"
                        value="@_promoInput" @oninput="e => _promoInput = e.Value?.ToString() ?? string.Empty" />
                 <button class="btn-secondary" @onclick="ApplyPromoAsync" disabled="@(_promoBusy || string.IsNullOrWhiteSpace(_promoInput))">
-                    @(_promoBusy ? "Checking…" : "Apply")
+                    @(_promoBusy ? T["billing.checking"] : T["billing.apply"])
                 </button>
             </div>
             @if (_promoDiscount > 0)
             {
-                <p class="promo-ok" role="status">✓ @_promoDiscount% discount will be applied at checkout.</p>
+                <p class="promo-ok" role="status">@string.Format(T["billing.promo_applied"], _promoDiscount)</p>
             }
             else if (_promoError is not null)
             {
@@ -113,7 +114,7 @@
                                      Highlighted="@(i == 1)"
                                      IsCurrent="@(_subscription?.PlanCode == plan.Code)"
                                      Disabled="@(_checkoutPlan == plan.Code)"
-                                     SelectLabel="@(_subscription is null ? "Subscribe" : "Switch plan")"
+                                     SelectLabel="@(_subscription is null ? T["billing.subscribe"] : T["billing.switch_plan"])"
                                      OnSelect="CheckoutAsync" />
                 }
             </div>
@@ -178,15 +179,15 @@
             {
                 _promoError = result.Reason switch
                 {
-                    "expired" => "That code has expired.",
-                    "exhausted" => "That code has reached its redemption limit.",
-                    _ => "That code isn't valid.",
+                    "expired" => T["billing.promo_expired"],
+                    "exhausted" => T["billing.promo_exhausted"],
+                    _ => T["billing.promo_invalid"],
                 };
             }
         }
         catch (Exception)
         {
-            _promoError = "We couldn't check that code. Please try again.";
+            _promoError = T["billing.promo_error"];
         }
         finally
         {
@@ -212,7 +213,7 @@
         }
         catch (Exception)
         {
-            _error = "We couldn't load your billing details. Please try again.";
+            _error = T["billing.error"];
         }
         finally
         {
