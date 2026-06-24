@@ -1,27 +1,28 @@
 @page "/admin/moderation"
 @inject ApiClient Api
+@inject IUiText T
 
-<PageTitle>Moderation — cerdikMY Admin</PageTitle>
+<PageTitle>@T["admin.mod.title"] — cerdikMY Admin</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Admin, UserRole.SafetyReviewer })">
-        <h1 class="page-title">Moderation queue</h1>
-        <p class="page-sub mb-6">Review AI tutor exchanges flagged for a trusted adult.</p>
+        <h1 class="page-title">@T["admin.mod.title"]</h1>
+        <p class="page-sub mb-6">@T["admin.mod.sub"]</p>
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading queue…</p>
+            <p class="text-slate-500" role="status">@T["admin.mod.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else if (_items.Count == 0)
         {
-            <div class="card"><p>🎉 Nothing to review — the queue is clear.</p></div>
+            <div class="card"><p>@T["admin.mod.clear"]</p></div>
         }
         else
         {
@@ -59,7 +60,7 @@
             _items = (await Api.GetModerationQueueAsync()).ToList();
         }
         catch (ApiException ex) { _error = ex.Message; }
-        catch (Exception) { _error = "We couldn't load the moderation queue. Please try again."; }
+        catch (Exception) { _error = T["admin.mod.error"]; }
         finally { _loading = false; }
     }
 
@@ -70,6 +71,6 @@
             await Api.ReviewModerationAsync(item.EventId, decision, $"Reviewed: {decision}");
             _items.RemoveAll(i => i.EventId == item.EventId);
         }
-        catch (Exception) { _error = "We couldn't save your decision. Please try again."; }
+        catch (Exception) { _error = T["admin.mod.save_error"]; }
     }
 }

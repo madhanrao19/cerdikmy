@@ -1,31 +1,32 @@
 @page "/admin/payments"
 @inject ApiClient Api
+@inject IUiText T
 
-<PageTitle>Payments — cerdikMY Admin</PageTitle>
+<PageTitle>@T["admin.pay.title"] — cerdikMY Admin</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Admin })">
-        <h1 class="page-title">Payment &amp; webhook logs</h1>
-        <p class="page-sub mb-6">Reconcile provider webhooks (Billplz, Curlec, Stripe).</p>
+        <h1 class="page-title">@T["admin.pay.title"]</h1>
+        <p class="page-sub mb-6">@T["admin.pay.sub"]</p>
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading payments…</p>
+            <p class="text-slate-500" role="status">@T["admin.pay.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else
         {
             <AdminDataTable TItem="WebhookLogDto" Items="_items"
                             SearchText="@(p => $"{p.Provider} {p.ProviderPaymentId} {p.Status}")"
-                            SearchPlaceholder="Search by provider, id or status">
+                            SearchPlaceholder="@T["admin.pay.search"]">
                 <HeaderTemplate>
-                    <th>Provider</th><th>Payment ID</th><th>Status</th><th>Amount</th><th>Processed</th>
+                    <th>@T["admin.pay.col.provider"]</th><th>@T["admin.pay.col.payment_id"]</th><th>@T["billing.col.status"]</th><th>@T["admin.pay.col.amount"]</th><th>@T["admin.pay.col.processed"]</th>
                 </HeaderTemplate>
                 <RowTemplate Context="p">
                     <td><span class="role-pill">@p.Provider</span></td>
@@ -34,7 +35,7 @@
                     <td>@p.Currency @((p.AmountCents / 100m).ToString("0.00"))</td>
                     <td>@(p.ProcessedAt?.LocalDateTime.ToString("d MMM yyyy HH:mm") ?? "—")</td>
                 </RowTemplate>
-                <EmptyContent><p>No payments recorded yet.</p></EmptyContent>
+                <EmptyContent><p>@T["admin.pay.empty"]</p></EmptyContent>
             </AdminDataTable>
         }
     </RoleGuard>
@@ -62,7 +63,7 @@
         _error = null;
         try { _items = await Api.GetPaymentsAsync(); }
         catch (ApiException ex) { _error = ex.Message; }
-        catch (Exception) { _error = "We couldn't load payments. Please try again."; }
+        catch (Exception) { _error = T["admin.pay.error"]; }
         finally { _loading = false; }
     }
 }
