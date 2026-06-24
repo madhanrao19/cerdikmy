@@ -296,6 +296,35 @@ public sealed class UiText : IUiText
         ["quiz.true"] = T("True", "Benar", "是", "சரி"),
         ["quiz.false"] = T("False", "Palsu", "否", "தவறு"),
 
+        // Tutor chat panel
+        ["tutor.you"] = T("You", "Anda", "你", "நீங்கள்"),
+        ["tutor.tutor"] = T("Tutor", "Tutor", "导师", "ஆசிரியர்"),
+        ["tutor.review_banner"] = T(
+            "This conversation has been flagged for a teacher to review. A grown-up will take a look soon.",
+            "Perbualan ini telah ditanda untuk semakan guru. Orang dewasa akan menyemaknya tidak lama lagi.",
+            "此对话已被标记，等待老师审核。大人会很快查看。",
+            "இந்த உரையாடல் ஆசிரியர் மதிப்பாய்வுக்காக கொடியிடப்பட்டுள்ளது. ஒரு பெரியவர் விரைவில் பார்ப்பார்."),
+        ["tutor.empty"] = T(
+            "Ask me anything about your lesson. I'll explain step by step.",
+            "Tanya saya apa sahaja tentang pelajaran anda. Saya akan terangkan langkah demi langkah.",
+            "关于你的课程，尽管问我。我会一步步讲解。",
+            "உங்கள் பாடம் பற்றி எதையும் என்னிடம் கேளுங்கள். படிப்படியாக விளக்குகிறேன்."),
+        ["tutor.sources"] = T("Sources", "Sumber", "来源", "ஆதாரங்கள்"),
+        ["tutor.send"] = T("Send", "Hantar", "发送", "அனுப்பு"),
+        ["tutor.placeholder"] = T("Type your question…", "Taip soalan anda…", "输入你的问题…", "உங்கள் கேள்வியை தட்டச்சு செய்யவும்…"),
+        ["tutor.input_label"] = T("Type your question", "Taip soalan anda", "输入你的问题", "உங்கள் கேள்வியை தட்டச்சு செய்யவும்"),
+        ["tutor.hint"] = T(
+            "Press Enter to send, Shift+Enter for a new line.",
+            "Tekan Enter untuk hantar, Shift+Enter untuk baris baharu.",
+            "按 Enter 发送，Shift+Enter 换行。",
+            "அனுப்ப Enter அழுத்தவும், புதிய வரிக்கு Shift+Enter."),
+        ["tutor.replying"] = T("Tutor is replying…", "Tutor sedang membalas…", "导师正在回复…", "ஆசிரியர் பதிலளிக்கிறார்…"),
+        ["tutor.unavailable"] = T(
+            "The tutor is unavailable right now. Please try again.",
+            "Tutor tidak tersedia sekarang. Sila cuba lagi.",
+            "导师暂时无法使用，请重试。",
+            "ஆசிரியர் இப்போது கிடைக்கவில்லை. மீண்டும் முயற்சிக்கவும்."),
+
         // Accessibility (landmarks / skip link)
         ["a11y.skip"] = T("Skip to main content", "Langkau ke kandungan utama", "跳到主要内容", "முதன்மை உள்ளடக்கத்திற்குச் செல்"),
         ["a11y.toggle_nav"] = T("Toggle navigation menu", "Togol menu navigasi", "切换导航菜单", "வழிசெலுத்தல் பட்டியலை மாற்று"),

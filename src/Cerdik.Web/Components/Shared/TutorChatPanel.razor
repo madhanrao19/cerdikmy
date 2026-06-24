@@ -1,6 +1,7 @@
 @implements IAsyncDisposable
 @inject TutorClient Tutor
 @inject MarkdownService Markdown
+@inject IUiText T
 
 @* Streaming AI tutor chat. Sends messages via the SSE TutorClient, appending
    "delta" chunks live and finalising with citations, mastery and risk. Includes
@@ -10,7 +11,7 @@
     {
         <div class="review-banner" role="alert">
             <span aria-hidden="true">🛡️</span>
-            <p>This conversation has been flagged for a teacher to review. A grown-up will take a look soon.</p>
+            <p>@T["tutor.review_banner"]</p>
         </div>
     }
 
@@ -19,14 +20,14 @@
         {
             <div class="tutor-empty">
                 <p class="empty-emoji" aria-hidden="true">💬</p>
-                <p>Ask me anything about your lesson. I'll explain step by step.</p>
+                <p>@T["tutor.empty"]</p>
             </div>
         }
 
         @foreach (var m in Messages)
         {
             <div class="msg msg-@(m.IsUser ? "user" : "assistant")">
-                <div class="msg-role">@(m.IsUser ? "You" : "Tutor")</div>
+                <div class="msg-role">@(m.IsUser ? T["tutor.you"] : T["tutor.tutor"])</div>
                 <div class="msg-bubble">
                     @if (m.IsUser)
                     {
@@ -37,8 +38,8 @@
                         <div class="prose">@Markdown.ToMarkup(m.Text)</div>
                         @if (m.Citations.Count > 0)
                         {
-                            <div class="msg-citations" aria-label="Sources">
-                                <span class="sources-label" aria-hidden="true">Sources</span>
+                            <div class="msg-citations" aria-label="@T["tutor.sources"]">
+                                <span class="sources-label" aria-hidden="true">@T["tutor.sources"]</span>
                                 @foreach (var c in m.Citations)
                                 {
                                     <CitationPill Citation="c" />
@@ -49,6 +50,7 @@
                         {
                             <div class="msg-mastery"><MasteryBadge Band="band" /></div>
                         }
+                        <div class="msg-read no-print"><ReadAloudButton Text="@StripMarkdown(m.Text)" /></div>
                     }
                 </div>
             </div>
@@ -57,11 +59,11 @@
         @if (_streaming)
         {
             <div class="msg msg-assistant">
-                <div class="msg-role">Tutor</div>
+                <div class="msg-role">@T["tutor.tutor"]</div>
                 <div class="msg-bubble">
                     <div class="prose">@Markdown.ToMarkup(_streamingText.ToString())</div>
                     <span class="typing" aria-hidden="true"><span></span><span></span><span></span></span>
-                    <span class="sr-only" role="status">Tutor is replying…</span>
+                    <span class="sr-only" role="status">@T["tutor.replying"]</span>
                 </div>
             </div>
         }
@@ -73,17 +75,17 @@
     }
 
     <form class="tutor-composer" @onsubmit="SendAsync" @onsubmit:preventDefault>
-        <label class="sr-only" for="tutor-input">Type your question</label>
+        <label class="sr-only" for="tutor-input">@T["tutor.input_label"]</label>
         <textarea id="tutor-input" class="tutor-input" rows="2"
-                  placeholder="Type your question…" value="@_input"
+                  placeholder="@T["tutor.placeholder"]" value="@_input"
                   @oninput="e => _input = e.Value?.ToString() ?? string.Empty"
                   @onkeydown="OnKeyDown" disabled="@(_streaming || SessionId is null)"></textarea>
         <button type="submit" class="btn-accent tutor-send"
                 disabled="@(_streaming || SessionId is null || string.IsNullOrWhiteSpace(_input))">
-            @(_streaming ? "…" : "Send")
+            @(_streaming ? "…" : T["tutor.send"])
         </button>
     </form>
-    <p class="composer-hint">Press Enter to send, Shift+Enter for a new line.</p>
+    <p class="composer-hint">@T["tutor.hint"]</p>
 </section>
 
 <style>
@@ -104,6 +106,7 @@
     .msg-citations { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .6rem; padding-top: .6rem; border-top: 1px solid #eef2f9; }
     .sources-label { font-size: .62rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #94a3b8; margin-right: .15rem; }
     .msg-mastery { margin-top: .5rem; }
+    .msg-read { margin-top: .5rem; }
     .typing { display: inline-flex; gap: 3px; margin-top: .35rem; }
     .typing span { width: 6px; height: 6px; border-radius: 9999px; background: #94a3b8; animation: typing 1s infinite; }
     .typing span:nth-child(2) { animation-delay: .15s; }
@@ -160,6 +163,9 @@
             }
         }
     }
+
+    private static string StripMarkdown(string md) =>
+        System.Text.RegularExpressions.Regex.Replace(md, @"[#*_`>~\[\]()]|!\[|\]\(.*?\)", " ").Trim();
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {
@@ -218,7 +224,7 @@
         }
         catch (Exception ex)
         {
-            _error = ex is ApiException api ? api.Message : "The tutor is unavailable right now. Please try again.";
+            _error = ex is ApiException api ? api.Message : T["tutor.unavailable"];
         }
         finally
         {
