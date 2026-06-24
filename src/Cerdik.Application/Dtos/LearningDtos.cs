@@ -85,6 +85,23 @@ public sealed record PlacementResultDto(
     MasteryBand RecommendedBand,
     IReadOnlyList<PlacementStandardScoreDto> Standards);
 
+// ---- Predictive insights ----
+public enum InsightTrend { Declining, Steady, Improving }
+public enum InsightRisk { Low, Medium, High }
+
+/// <summary>An at-a-glance outlook for a student derived from mastery, recent exams and activity.</summary>
+public sealed record StudentInsightsDto(
+    double OverallMastery,
+    MasteryBand OverallBand,
+    double? AvgRecentExamPercent,
+    int ExamsConsidered,
+    double ProjectedPercent,
+    string ProjectedGrade,
+    InsightTrend Trend,
+    InsightRisk Risk,
+    bool ActiveLast7Days,
+    int OpenFlags);
+
 // ---- Spaced-repetition review ----
 public sealed record ReviewItemDto(
     Guid LessonId,

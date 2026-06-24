@@ -219,6 +219,56 @@ public sealed class StudentsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>At-a-glance predictive outlook: projected grade (from recent exams, else mastery),
+    /// an improving/steady/declining trend, and a low/medium/high risk flag with its driving signals.</summary>
+    [HttpGet("/students/{id:guid}/insights")]
+    public async Task<ActionResult<StudentInsightsDto>> Insights(Guid id, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+
+        var records = await _db.ProgressRecords.AsNoTracking().Where(p => p.StudentId == id)
+            .Select(p => p.MasteryScore).ToListAsync(ct);
+        var overall = records.Count > 0 ? Math.Round(records.Average(), 1) : 0;
+
+        // Recent exams (most recent first) drive the projection and the trend.
+        var exams = await _db.ExamAttempts.AsNoTracking()
+            .Where(e => e.StudentId == id && e.SubmittedAt != null)
+            .OrderByDescending(e => e.SubmittedAt)
+            .Take(6).Select(e => e.PercentScore).ToListAsync(ct);
+
+        double? avgRecent = exams.Count > 0 ? Math.Round(exams.Average(), 1) : null;
+        var projected = avgRecent ?? overall;
+
+        // Trend: compare the newer half of recent exams against the older half.
+        var trend = InsightTrend.Steady;
+        if (exams.Count >= 2)
+        {
+            var half = exams.Count / 2;
+            var newer = exams.Take(half == 0 ? 1 : half).Average();   // most recent
+            var older = exams.Skip(exams.Count - (half == 0 ? 1 : half)).Average();
+            trend = newer >= older + 5 ? InsightTrend.Improving
+                : newer <= older - 5 ? InsightTrend.Declining
+                : InsightTrend.Steady;
+        }
+
+        var weekAgo = DateTimeOffset.UtcNow.AddDays(-7);
+        var activeLast7 = await _db.Attempts.AnyAsync(a => a.StudentId == id && a.SubmittedAt >= weekAgo, ct)
+            || await _db.ProgressRecords.AnyAsync(p => p.StudentId == id && p.LastActivityAt >= weekAgo, ct)
+            || await _db.ExamAttempts.AnyAsync(e => e.StudentId == id && e.SubmittedAt >= weekAgo, ct);
+
+        var openFlags = await _db.ModerationEvents.CountAsync(m => m.InterventionRaised && m.ReviewedAt == null
+            && _db.TutorSessions.Any(t => t.Id == m.TutorSessionId && t.StudentId == id), ct);
+
+        // Risk: weakest signal wins.
+        var risk = InsightRisk.Low;
+        if (projected < 60 || trend == InsightTrend.Declining || !activeLast7) risk = InsightRisk.Medium;
+        if (projected < 45 || openFlags > 0 || (trend == InsightTrend.Declining && projected < 55)) risk = InsightRisk.High;
+
+        return Ok(new StudentInsightsDto(
+            overall, MasteryMath.ToBand(overall), avgRecent, exams.Count, projected,
+            Cerdik.Application.Grading.Grades.Letter(projected), trend, risk, activeLast7, openFlags));
+    }
+
     /// <summary>Spaced-repetition review queue: completed lessons that are "due" again, using a simple
     /// band-based interval (stronger mastery → longer interval) over the last activity date.</summary>
     [HttpGet("/students/{id:guid}/reviews")]

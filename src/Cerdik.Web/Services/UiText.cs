@@ -130,6 +130,20 @@ public sealed class UiText : IUiText
             "无法加载此报告，请重试。",
             "இந்த அறிக்கையை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
 
+        // Parent — predictive insights / outlook
+        ["insights.title"] = T("Outlook", "Tinjauan", "前景预测", "எதிர்நோக்கு"),
+        ["insights.projected"] = T("Projected grade", "Gred dijangka", "预测等级", "எதிர்பார்க்கப்படும் தரம்"),
+        ["insights.trend"] = T("Trend", "Aliran", "趋势", "போக்கு"),
+        ["insights.risk"] = T("Status", "Status", "状态", "நிலை"),
+        ["insights.trend.improving"] = T("Improving ↑", "Bertambah baik ↑", "进步中 ↑", "மேம்படுகிறது ↑"),
+        ["insights.trend.steady"] = T("Steady →", "Stabil →", "稳定 →", "நிலையானது →"),
+        ["insights.trend.declining"] = T("Declining ↓", "Menurun ↓", "下降中 ↓", "குறைகிறது ↓"),
+        ["insights.risk.low"] = T("On track", "Di landasan", "进展良好", "சரியான பாதையில்"),
+        ["insights.risk.medium"] = T("Needs attention", "Perlu perhatian", "需要关注", "கவனம் தேவை"),
+        ["insights.risk.high"] = T("At risk", "Berisiko", "有风险", "ஆபத்தில்"),
+        ["insights.based_on_exams"] = T("Based on {0} recent exam(s)", "Berdasarkan {0} peperiksaan terkini", "基于最近 {0} 次考试", "சமீபத்திய {0} தேர்வுகளின் அடிப்படையில்"),
+        ["insights.based_on_mastery"] = T("Based on overall mastery", "Berdasarkan penguasaan keseluruhan", "基于总体掌握度", "மொத்த தேர்ச்சியின் அடிப்படையில்"),
+
         // Parent — tutor conversation review
         ["parent.tutor.title"] = T("Tutor conversations", "Perbualan tutor", "导师对话", "ஆசிரியர் உரையாடல்கள்"),
         ["parent.tutor.sub"] = T(
