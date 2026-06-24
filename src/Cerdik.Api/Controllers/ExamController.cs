@@ -139,6 +139,46 @@ public sealed class ExamController : ControllerBase
         return Ok(items);
     }
 
+    private const double CertificatePassPercent = 50; // grade C or better
+
+    /// <summary>Certificates earned by passing a mock exam (≥ 50%), most recent first.</summary>
+    [HttpGet("/students/{id:guid}/certificates")]
+    public async Task<ActionResult<IReadOnlyList<CertificateDto>>> Certificates(Guid id, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+        var studentName = await _db.Students.Where(s => s.Id == id).Select(s => s.DisplayName).FirstOrDefaultAsync(ct)
+            ?? throw ApiException.NotFound("Student");
+
+        var items = await _db.ExamAttempts.AsNoTracking()
+            .Where(e => e.StudentId == id && e.SubmittedAt != null && e.PercentScore >= CertificatePassPercent)
+            .OrderByDescending(e => e.SubmittedAt)
+            .Take(50)
+            .Select(e => new CertificateDto(
+                e.Id, studentName, e.SubjectId, e.SubjectName, e.Grade, e.PercentScore, e.Band, e.SubmittedAt!.Value))
+            .ToListAsync(ct);
+        return Ok(items);
+    }
+
+    /// <summary>One certificate's detail for the printable page (404 unless the exam was passed).</summary>
+    [HttpGet("/students/{id:guid}/certificates/{examId:guid}")]
+    public async Task<ActionResult<CertificateDto>> Certificate(Guid id, Guid examId, CancellationToken ct)
+    {
+        await EnsureAccess(id, ct);
+        var studentName = await _db.Students.Where(s => s.Id == id).Select(s => s.DisplayName).FirstOrDefaultAsync(ct)
+            ?? throw ApiException.NotFound("Student");
+
+        var exam = await _db.ExamAttempts.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == examId && e.StudentId == id && e.SubmittedAt != null, ct)
+            ?? throw ApiException.NotFound("Certificate");
+        if (exam.PercentScore < CertificatePassPercent)
+        {
+            throw ApiException.NotFound("Certificate");
+        }
+
+        return Ok(new CertificateDto(
+            exam.Id, studentName, exam.SubjectId, exam.SubjectName, exam.Grade, exam.PercentScore, exam.Band, exam.SubmittedAt!.Value));
+    }
+
     private async Task<List<StoredQuestion>> AssembleAsync(Student student, Guid subjectId, CancellationToken ct)
     {
         var lessons = await _db.Lessons.AsNoTracking()

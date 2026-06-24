@@ -138,6 +138,12 @@ public sealed class ApiClient
     public Task<IReadOnlyList<ExamHistoryItemDto>> GetExamHistoryAsync(Guid studentId, CancellationToken ct = default)
         => GetAsync<IReadOnlyList<ExamHistoryItemDto>>($"/students/{studentId}/exams", ct);
 
+    public Task<IReadOnlyList<CertificateDto>> GetCertificatesAsync(Guid studentId, CancellationToken ct = default)
+        => GetAsync<IReadOnlyList<CertificateDto>>($"/students/{studentId}/certificates", ct);
+
+    public Task<CertificateDto> GetCertificateAsync(Guid studentId, Guid examId, CancellationToken ct = default)
+        => GetAsync<CertificateDto>($"/students/{studentId}/certificates/{examId}", ct);
+
     // -------------------------------------------------------------- Parent
     public Task<ParentDashboardDto> GetParentDashboardAsync(CancellationToken ct = default)
         => GetAsync<ParentDashboardDto>("/parents/dashboard", ct);

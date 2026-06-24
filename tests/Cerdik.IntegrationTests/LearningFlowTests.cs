@@ -341,6 +341,42 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Passed_exam_yields_a_printable_certificate()
+    {
+        var client = await LoginAsParentAsync();
+
+        Guid studentId, subjectId;
+        using (var db = _factory.NewDbContext())
+        {
+            studentId = (await db.Students.FirstAsync(s => s.DisplayName == "Aisyah")).Id;
+            var maths = await db.Activities.Include(a => a.Lesson)
+                .FirstAsync(a => a.QuestionsJson.Contains("\"m1\""));
+            subjectId = await db.SubjectVariants.Where(v => v.Id == maths.Lesson.SubjectVariantId)
+                .Select(v => v.SubjectId).FirstAsync();
+        }
+
+        var start = await client.PostAsync($"/students/{studentId}/subjects/{subjectId}/exam/start", null);
+        var exam = await start.Content.ReadFromJsonAsync<ExamStartDto>(TestJson.Options);
+        var known = new Dictionary<string, string> { ["m1"] = "7", ["m2"] = "7", ["m3"] = "Palsu" };
+        var answers = exam!.Questions
+            .Where(q => known.ContainsKey(q.Key.Split('|')[1]))
+            .ToDictionary(q => q.Key, q => known[q.Key.Split('|')[1]]);
+        await client.PostAsJsonAsync($"/students/{studentId}/exam/{exam.ExamId}/submit",
+            new ExamSubmitRequest(answers, 60));
+
+        var certResp = await client.GetAsync($"/students/{studentId}/certificates/{exam.ExamId}");
+        certResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var cert = await certResp.Content.ReadFromJsonAsync<CertificateDto>(TestJson.Options);
+        cert!.ExamId.Should().Be(exam.ExamId);
+        cert.StudentName.Should().NotBeNullOrEmpty();
+        cert.PercentScore.Should().BeGreaterThanOrEqualTo(50);
+
+        var list = await client.GetFromJsonAsync<List<CertificateDto>>(
+            $"/students/{studentId}/certificates", TestJson.Options);
+        list!.Should().Contain(c => c.ExamId == exam.ExamId);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();

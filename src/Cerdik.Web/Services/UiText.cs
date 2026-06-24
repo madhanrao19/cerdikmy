@@ -212,6 +212,18 @@ public sealed class UiText : IUiText
         ["student.cta.placement"] = T("📋 Take a placement check", "📋 Buat ujian penempatan", "📋 进行分级测试", "📋 நிலை தேர்வை எடுக்கவும்"),
         ["student.cta.exam"] = T("📝 Take a mock exam", "📝 Buat peperiksaan percubaan", "📝 进行模拟考试", "📝 மாதிரித் தேர்வை எடுக்கவும்"),
 
+        // Student — certificate
+        ["cert.title"] = T("Certificate", "Sijil", "证书", "சான்றிதழ்"),
+        ["cert.view"] = T("🏅 View certificate", "🏅 Lihat sijil", "🏅 查看证书", "🏅 சான்றிதழைப் பார்"),
+        ["cert.heading"] = T("Certificate of Achievement", "Sijil Pencapaian", "成就证书", "சாதனைச் சான்றிதழ்"),
+        ["cert.awarded_to"] = T("This certifies that", "Ini mengesahkan bahawa", "兹证明", "இது சான்றளிக்கிறது"),
+        ["cert.completed"] = T("has successfully passed the mock exam for", "telah berjaya lulus peperiksaan percubaan bagi", "已成功通过以下科目的模拟考试", "பின்வரும் பாடத்திற்கான மாதிரித் தேர்வில் வெற்றிகரமாக தேர்ச்சி பெற்றார்"),
+        ["cert.with_grade"] = T("with grade", "dengan gred", "成绩为", "தரத்துடன்"),
+        ["cert.issued"] = T("Issued {0}", "Dikeluarkan {0}", "颁发于 {0}", "வழங்கப்பட்டது {0}"),
+        ["cert.print"] = T("🖨️ Print", "🖨️ Cetak", "🖨️ 打印", "🖨️ அச்சிடு"),
+        ["cert.back"] = T("Back", "Kembali", "返回", "திரும்பு"),
+        ["cert.not_found"] = T("Certificate not found.", "Sijil tidak ditemui.", "找不到证书。", "சான்றிதழ் கிடைக்கவில்லை."),
+
         // Student — mock exam
         ["student.exam.title"] = T("Mock exam", "Peperiksaan percubaan", "模拟考试", "மாதிரித் தேர்வு"),
         ["student.exam.sub"] = T(
