@@ -266,6 +266,24 @@ public sealed class UiText : IUiText
         ["student.placement.retake"] = T("Take another", "Ambil yang lain", "再测一次", "மற்றொன்றை எடு"),
         ["student.badges.recent"] = T("Recent badges", "Lencana terbaru", "最近的徽章", "சமீபத்திய பதக்கங்கள்"),
 
+        // Quiz / activity
+        ["quiz.passed"] = T("Passed", "Lulus", "通过", "தேர்ச்சி"),
+        ["quiz.keep_practising"] = T("Keep practising", "Teruskan berlatih", "继续练习", "தொடர்ந்து பயிற்சி செய்"),
+        ["quiz.submit"] = T("Submit answers", "Hantar jawapan", "提交答案", "பதில்களைச் சமர்ப்பி"),
+        ["quiz.submitting"] = T("Submitting…", "Menghantar…", "提交中…", "சமர்ப்பிக்கிறது…"),
+        ["quiz.try_again"] = T("Try again", "Cuba lagi", "再试一次", "மீண்டும் முயற்சி"),
+        ["quiz.correct"] = T("Correct", "Betul", "正确", "சரி"),
+        ["quiz.incorrect"] = T("Incorrect", "Salah", "错误", "தவறு"),
+        ["quiz.correct_answer"] = T("Correct answer:", "Jawapan betul:", "正确答案：", "சரியான பதில்:"),
+        ["quiz.points"] = T("pts", "mata", "分", "புள்ளி"),
+        ["quiz.error"] = T(
+            "We couldn't submit your answers. Please try again.",
+            "Kami tidak dapat menghantar jawapan anda. Sila cuba lagi.",
+            "无法提交您的答案，请重试。",
+            "உங்கள் பதில்களைச் சமர்ப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["quiz.true"] = T("True", "Benar", "是", "சரி"),
+        ["quiz.false"] = T("False", "Palsu", "否", "தவறு"),
+
         // Read aloud (text-to-speech)
         ["read.listen"] = T("Listen", "Dengar", "朗读", "கேள்"),
         ["read.stop"] = T("Stop", "Berhenti", "停止", "நிறுத்து"),

@@ -1,6 +1,7 @@
 @* Renders a list of questions (by QuestionType), collects answers into a
    Dictionary<string,string>, and displays per-question feedback from the
    AttemptResultDto after submission. Fully keyboard accessible. *@
+@inject IUiText T
 <section class="quiz-card" aria-labelledby="@_titleId">
     <header class="quiz-head">
         <h2 id="@_titleId" class="quiz-title">@Title</h2>
@@ -9,7 +10,7 @@
             <div class="quiz-score" role="status" aria-live="polite">
                 <span class="score-pct">@Math.Round(Result.PercentScore)%</span>
                 <span class="@(Result.Passed ? "score-pass" : "score-fail")">
-                    @(Result.Passed ? "Passed" : "Keep practising")
+                    @(Result.Passed ? T["quiz.passed"] : T["quiz.keep_practising"])
                 </span>
                 <MasteryBadge Band="Result.TahapPenguasaan" />
             </div>
@@ -25,7 +26,7 @@
                     <fieldset>
                         <legend class="q-prompt">
                             <span class="q-index">@index.</span> @q.Prompt
-                            <span class="q-points">@q.Points pt@(q.Points == 1 ? "" : "s")</span>
+                            <span class="q-points">@q.Points @T["quiz.points"]</span>
                         </legend>
 
                         @RenderInput(q)
@@ -39,11 +40,11 @@
                         {
                             <div class="q-feedback" role="note">
                                 <p class="q-result @(feedback.Correct ? "ok" : "no")">
-                                    @(feedback.Correct ? "✓ Correct" : "✗ Incorrect")
+                                    @(feedback.Correct ? "✓ " + T["quiz.correct"] : "✗ " + T["quiz.incorrect"])
                                 </p>
                                 @if (!feedback.Correct)
                                 {
-                                    <p class="q-correct-answer">Correct answer: <strong>@feedback.Correct_Answer</strong></p>
+                                    <p class="q-correct-answer">@T["quiz.correct_answer"] <strong>@feedback.Correct_Answer</strong></p>
                                 }
                                 @if (!string.IsNullOrWhiteSpace(feedback.Explanation))
                                 {
@@ -65,14 +66,14 @@
         {
             <div class="quiz-actions">
                 <button type="submit" class="btn-primary" disabled="@_submitting">
-                    @(_submitting ? "Submitting…" : "Submit answers")
+                    @(_submitting ? T["quiz.submitting"] : T["quiz.submit"])
                 </button>
             </div>
         }
         else if (AllowRetry)
         {
             <div class="quiz-actions">
-                <button type="button" class="btn-secondary" @onclick="Retry">Try again</button>
+                <button type="button" class="btn-secondary" @onclick="Retry">@T["quiz.try_again"]</button>
             </div>
         }
     </EditForm>
@@ -146,7 +147,10 @@
                 RenderChoices(builder, q, disabled, q.Options);
                 break;
             case QuestionType.TrueFalse:
-                RenderChoices(builder, q, disabled, new[] { "True", "False" });
+                // Use the question's own options so the values match the (possibly localized)
+                // correct answer, e.g. ["Benar","Palsu"]; fall back to localized True/False.
+                RenderChoices(builder, q, disabled,
+                    q.Options.Count > 0 ? q.Options : new[] { T["quiz.true"], T["quiz.false"] });
                 break;
             case QuestionType.Numeric:
                 RenderText(builder, q, disabled, inputMode: "numeric", type: "number");
@@ -218,7 +222,7 @@
         }
         catch (Exception ex)
         {
-            _error = ex is ApiException api ? api.Message : "We couldn't submit your answers. Please try again.";
+            _error = ex is ApiException api ? api.Message : T["quiz.error"];
         }
         finally
         {
