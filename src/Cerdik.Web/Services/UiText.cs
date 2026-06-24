@@ -69,6 +69,7 @@ public sealed class UiText : IUiText
         ["nav.curriculum"] = T("Curriculum", "Kurikulum", "课程", "பாடத்திட்டம்"),
         ["nav.moderation"] = T("Moderation", "Penyederhanaan", "审核", "மிதப்படுத்தல்"),
         ["nav.payments"] = T("Payments", "Pembayaran", "付款", "கட்டணங்கள்"),
+        ["nav.promo"] = T("Promo codes", "Kod promosi", "优惠码", "விளம்பரக் குறியீடுகள்"),
 
         // App chrome
         ["app.signout"] = T("Sign out", "Log keluar", "登出", "வெளியேறு"),

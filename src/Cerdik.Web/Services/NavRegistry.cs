@@ -29,6 +29,7 @@ public static class NavRegistry
         new("/admin/curriculum", "nav.curriculum", "🧭", [UserRole.Admin, UserRole.ContentAdmin]),
         new("/admin/moderation", "nav.moderation", "🛡️", [UserRole.Admin, UserRole.SafetyReviewer]),
         new("/admin/payments", "nav.payments", "🧾", [UserRole.Admin]),
+        new("/admin/promo-codes", "nav.promo", "🎟️", [UserRole.Admin]),
     ];
 
     public static IEnumerable<NavEntry> For(UserRole? role) =>

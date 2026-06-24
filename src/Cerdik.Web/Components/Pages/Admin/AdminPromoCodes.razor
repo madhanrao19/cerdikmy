@@ -1,0 +1,189 @@
+@page "/admin/promo-codes"
+@using System.ComponentModel.DataAnnotations
+@inject ApiClient Api
+
+<PageTitle>Promo codes — cerdikMY Admin</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Admin })">
+        <h1 class="page-title">Promo codes</h1>
+        <p class="page-sub mb-6">Create and review discount / gift codes.</p>
+
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">Loading codes…</p>
+        }
+        else if (_error is not null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@_error</p>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+            </div>
+        }
+        else
+        {
+            <AdminDataTable TItem="PromoCodeDto" Items="_codes"
+                            SearchText="@(c => c.Code)"
+                            SearchPlaceholder="Search by code">
+                <Toolbar>
+                    <button class="btn-primary" @onclick="OpenCreate">+ New code</button>
+                </Toolbar>
+                <HeaderTemplate>
+                    <th>Code</th><th>Discount</th><th>Redemptions</th><th>Expires</th><th>Status</th>
+                </HeaderTemplate>
+                <RowTemplate Context="c">
+                    <td><strong>@c.Code</strong></td>
+                    <td>@c.DiscountPercent%</td>
+                    <td>@c.RedemptionCount@(c.MaxRedemptions > 0 ? $" / {c.MaxRedemptions}" : " / ∞")</td>
+                    <td>@(c.ExpiresAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
+                    <td>
+                        <span class="status-dot @(c.IsActive ? "on" : "off")" aria-hidden="true"></span>
+                        @(c.IsActive ? "Active" : "Inactive")
+                    </td>
+                </RowTemplate>
+                <EmptyContent>
+                    <p>No promo codes yet.</p>
+                </EmptyContent>
+            </AdminDataTable>
+        }
+
+        @if (_showCreate)
+        {
+            <div class="modal-backdrop" @onclick="CloseCreate">
+                <div class="modal" role="dialog" aria-modal="true" aria-labelledby="create-promo-h"
+                     @onclick:stopPropagation>
+                    <h2 id="create-promo-h" class="modal-title">Create promo code</h2>
+                    <EditForm Model="_form" OnValidSubmit="CreateAsync" FormName="create-promo">
+                        <DataAnnotationsValidator />
+                        @if (_createError is not null)
+                        {
+                            <p class="text-rose-700 mb-3" role="alert">@_createError</p>
+                        }
+                        <div class="field">
+                            <label class="label" for="cp-code">Code</label>
+                            <InputText id="cp-code" class="input" @bind-Value="_form.Code" />
+                            <ValidationMessage For="() => _form.Code" role="alert" />
+                        </div>
+                        <div class="field">
+                            <label class="label" for="cp-discount">Discount (%)</label>
+                            <InputNumber id="cp-discount" class="input" @bind-Value="_form.DiscountPercent" />
+                            <ValidationMessage For="() => _form.DiscountPercent" role="alert" />
+                        </div>
+                        <div class="field">
+                            <label class="label" for="cp-max">Max redemptions (0 = unlimited)</label>
+                            <InputNumber id="cp-max" class="input" @bind-Value="_form.MaxRedemptions" />
+                            <ValidationMessage For="() => _form.MaxRedemptions" role="alert" />
+                        </div>
+                        <div class="field">
+                            <label class="label" for="cp-days">Expires in days (0 = never)</label>
+                            <InputNumber id="cp-days" class="input" @bind-Value="_form.ExpiresInDays" />
+                            <ValidationMessage For="() => _form.ExpiresInDays" role="alert" />
+                        </div>
+                        <div class="modal-actions">
+                            <button type="button" class="btn-secondary" @onclick="CloseCreate">Cancel</button>
+                            <button type="submit" class="btn-primary" disabled="@_creating">
+                                @(_creating ? "Creating…" : "Create code")
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .page-title { font-size: 1.6rem; font-weight: 700; color: #0f172a; }
+    .page-sub { color: #64748b; margin-top: .25rem; }
+    .status-dot { display: inline-block; width: .55rem; height: .55rem; border-radius: 9999px; margin-right: .35rem; }
+    .status-dot.on { background: #10b981; } .status-dot.off { background: #cbd5e1; }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.5); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+    .modal { background: #fff; border-radius: 1rem; padding: 1.5rem; width: 100%; max-width: 28rem; box-shadow: 0 20px 40px -16px rgba(0,0,0,.4); }
+    .modal-title { font-size: 1.2rem; font-weight: 700; color: #0f172a; margin-bottom: 1rem; }
+    .field { margin-bottom: 1rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+</style>
+
+@code {
+    private IReadOnlyList<PromoCodeDto> _codes = Array.Empty<PromoCodeDto>();
+    private bool _loading = true;
+    private string? _error;
+
+    private bool _showCreate;
+    private bool _creating;
+    private string? _createError;
+    private CreatePromoForm _form = new();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try
+        {
+            _codes = await Api.GetPromoCodesAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (Exception)
+        {
+            _error = "We couldn't load promo codes. Please try again.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void OpenCreate()
+    {
+        _form = new CreatePromoForm();
+        _createError = null;
+        _showCreate = true;
+    }
+
+    private void CloseCreate() => _showCreate = false;
+
+    private async Task CreateAsync()
+    {
+        _creating = true;
+        _createError = null;
+        try
+        {
+            DateTimeOffset? expires = _form.ExpiresInDays > 0 ? DateTimeOffset.UtcNow.AddDays(_form.ExpiresInDays) : null;
+            await Api.CreatePromoCodeAsync(
+                new CreatePromoCodeRequest(_form.Code, _form.DiscountPercent, _form.MaxRedemptions, expires));
+            _showCreate = false;
+            await LoadAsync();
+        }
+        catch (ApiException ex)
+        {
+            _createError = ex.StatusCode == System.Net.HttpStatusCode.Conflict
+                ? "That code already exists."
+                : ex.Message;
+        }
+        catch (Exception)
+        {
+            _createError = "We couldn't create the code. Please try again.";
+        }
+        finally
+        {
+            _creating = false;
+        }
+    }
+
+    private sealed class CreatePromoForm
+    {
+        [Required, StringLength(40, MinimumLength = 3)]
+        public string Code { get; set; } = "";
+        [Range(1, 100, ErrorMessage = "Discount must be 1–100%.")]
+        public int DiscountPercent { get; set; } = 10;
+        [Range(0, 1_000_000)]
+        public int MaxRedemptions { get; set; }
+        [Range(0, 3650)]
+        public int ExpiresInDays { get; set; }
+    }
+}
