@@ -1,6 +1,6 @@
 @* Root document for the Blazor Web App. *@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@HtmlLang()">
 
 <head>
     <meta charset="utf-8" />
@@ -31,3 +31,13 @@
 </body>
 
 </html>
+
+@code {
+    // Reflect the active culture on <html lang> so screen readers and the browser pronounce/treat
+    // content in the right language.
+    private static string HtmlLang()
+    {
+        var code = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        return code is "en" or "ms" or "zh" or "ta" ? code : "en";
+    }
+}

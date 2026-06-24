@@ -296,6 +296,12 @@ public sealed class UiText : IUiText
         ["quiz.true"] = T("True", "Benar", "是", "சரி"),
         ["quiz.false"] = T("False", "Palsu", "否", "தவறு"),
 
+        // Accessibility (landmarks / skip link)
+        ["a11y.skip"] = T("Skip to main content", "Langkau ke kandungan utama", "跳到主要内容", "முதன்மை உள்ளடக்கத்திற்குச் செல்"),
+        ["a11y.toggle_nav"] = T("Toggle navigation menu", "Togol menu navigasi", "切换导航菜单", "வழிசெலுத்தல் பட்டியலை மாற்று"),
+        ["a11y.sidebar"] = T("Sidebar", "Bar sisi", "侧边栏", "பக்கப்பட்டி"),
+        ["a11y.main"] = T("Main content", "Kandungan utama", "主要内容", "முதன்மை உள்ளடக்கம்"),
+
         // Read aloud (text-to-speech)
         ["read.listen"] = T("Listen", "Dengar", "朗读", "கேள்"),
         ["read.stop"] = T("Stop", "Berhenti", "停止", "நிறுத்து"),
