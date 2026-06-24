@@ -109,7 +109,7 @@ public sealed class ExamController : ControllerBase
         exam.CorrectCount = correct;
         exam.PercentScore = percent;
         exam.Band = MasteryMath.ToBand(percent);
-        exam.Grade = GradeFor(percent);
+        exam.Grade = Cerdik.Application.Grading.Grades.Letter(percent);
         exam.SubmittedAt = _clock.UtcNow;
         // Derive elapsed time from the server clock (StartedAt -> now), not the client-reported value,
         // so a suspended tab or a hand-crafted request can't make a timed exam effectively untimed.
@@ -179,19 +179,6 @@ public sealed class ExamController : ControllerBase
         }
         return result;
     }
-
-    private static string GradeFor(double pct) => pct switch
-    {
-        >= 90 => "A+",
-        >= 80 => "A",
-        >= 70 => "B+",
-        >= 65 => "B",
-        >= 60 => "C+",
-        >= 50 => "C",
-        >= 45 => "D",
-        >= 40 => "E",
-        _ => "G",
-    };
 
     private async Task EnsureAccess(Guid studentId, CancellationToken ct)
     {

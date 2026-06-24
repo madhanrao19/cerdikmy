@@ -325,6 +325,22 @@ public class LearningFlowTests
     }
 
     [Fact]
+    public async Task Insights_return_a_projected_grade_and_risk()
+    {
+        var client = await LoginAsParentAsync();
+        var studentId = await FirstStudentIdAsync(client);
+
+        var resp = await client.GetAsync($"/students/{studentId}/insights");
+        resp.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var ins = await resp.Content.ReadFromJsonAsync<StudentInsightsDto>(TestJson.Options);
+        ins!.ProjectedGrade.Should().NotBeNullOrEmpty();
+        ins.ProjectedPercent.Should().BeInRange(0, 100);
+        ins.Risk.Should().BeOneOf(InsightRisk.Low, InsightRisk.Medium, InsightRisk.High);
+        ins.Trend.Should().BeOneOf(InsightTrend.Declining, InsightTrend.Steady, InsightTrend.Improving);
+    }
+
+    [Fact]
     public async Task Parent_dashboard_returns_children_overview()
     {
         var client = await LoginAsParentAsync();
