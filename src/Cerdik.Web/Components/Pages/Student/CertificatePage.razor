@@ -1,0 +1,100 @@
+@page "/student/certificate/{ExamId:guid}"
+@inject ApiClient Api
+@inject AuthStateService Auth
+@inject CurrentStudentState Current
+@inject IJSRuntime JS
+@inject IUiText T
+
+<PageTitle>@T["cert.title"] — cerdikMY</PageTitle>
+
+<AppShell>
+    <RoleGuard Roles="@(new[] { UserRole.Student, UserRole.Parent })">
+        @if (_loading)
+        {
+            <p class="text-slate-500" role="status">@T["student.exam.loading"]</p>
+        }
+        else if (_cert is null)
+        {
+            <div class="card" role="alert">
+                <p class="text-rose-700">@T["cert.not_found"]</p>
+                <a class="btn-secondary mt-4" href="/student/exam">@T["cert.back"]</a>
+            </div>
+        }
+        else
+        {
+            <div class="cert-toolbar no-print">
+                <a class="btn-secondary" href="/student/exam">@T["cert.back"]</a>
+                <button class="btn-primary" @onclick="PrintAsync">@T["cert.print"]</button>
+            </div>
+
+            <article class="certificate" id="printable-cert">
+                <div class="cert-inner">
+                    <div class="cert-brand">cerdik<span class="brand-accent">MY</span></div>
+                    <p class="cert-kicker">@T["cert.heading"]</p>
+                    <p class="cert-line">@T["cert.awarded_to"]</p>
+                    <h1 class="cert-name">@_cert.StudentName</h1>
+                    <p class="cert-line">@T["cert.completed"]</p>
+                    <h2 class="cert-subject">@_cert.SubjectName</h2>
+                    <div class="cert-grade">
+                        <span class="cert-grade-label">@T["cert.with_grade"]</span>
+                        <span class="cert-grade-value">@_cert.Grade</span>
+                        <span class="cert-grade-pct">@_cert.PercentScore%</span>
+                    </div>
+                    <p class="cert-date">@string.Format(T["cert.issued"], _cert.IssuedAt.LocalDateTime.ToString("d MMMM yyyy"))</p>
+                    <div class="cert-seal" aria-hidden="true">🎓</div>
+                </div>
+            </article>
+        }
+    </RoleGuard>
+</AppShell>
+
+<style>
+    .cert-toolbar { display: flex; gap: .5rem; justify-content: flex-end; margin-bottom: 1rem; }
+    .certificate { max-width: 50rem; margin: 0 auto; background: #fff; border: 2px solid #0f766e; border-radius: 1rem; padding: .5rem; }
+    .cert-inner { border: 1px solid #99f6e4; border-radius: .75rem; padding: 2.5rem 2rem; text-align: center; background:
+        radial-gradient(circle at top, #f0fdfa 0%, #fff 60%); }
+    .cert-brand { font-size: 1.4rem; font-weight: 800; color: #0f172a; letter-spacing: -.01em; }
+    .cert-kicker { margin-top: 1rem; font-size: .8rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #0f766e; }
+    .cert-line { margin-top: 1.25rem; color: #64748b; font-size: .95rem; }
+    .cert-name { font-size: 2.1rem; font-weight: 800; color: #0f172a; margin-top: .25rem; }
+    .cert-subject { font-size: 1.5rem; font-weight: 700; color: #0f766e; margin-top: .25rem; }
+    .cert-grade { display: inline-flex; align-items: baseline; gap: .6rem; margin-top: 1.5rem; }
+    .cert-grade-label { color: #64748b; font-size: .9rem; }
+    .cert-grade-value { font-size: 2.2rem; font-weight: 800; color: #0f172a; }
+    .cert-grade-pct { color: #64748b; font-weight: 600; }
+    .cert-date { margin-top: 1.5rem; color: #475569; font-size: .85rem; }
+    .cert-seal { font-size: 3rem; margin-top: 1rem; }
+    @@media print {
+        .no-print, .app-header, .app-sidebar { display: none !important; }
+        .app-main { padding: 0 !important; }
+        .certificate { border-color: #0f766e; max-width: none; }
+    }
+</style>
+
+@code {
+    [Parameter] public Guid ExamId { get; set; }
+
+    private CertificateDto? _cert;
+    private bool _loading = true;
+
+    private Guid? StudentId => Current.StudentId ?? Auth.User?.StudentId ?? Auth.Students.FirstOrDefault()?.Id;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Current.EnsureDefault(Auth.Students);
+        try
+        {
+            if (StudentId is { } sid) _cert = await Api.GetCertificateAsync(sid, ExamId);
+        }
+        catch (Exception)
+        {
+            _cert = null;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrintAsync() => await JS.InvokeVoidAsync("window.print");
+}

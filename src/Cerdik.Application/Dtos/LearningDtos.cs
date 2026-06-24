@@ -137,6 +137,17 @@ public sealed record ExamResultDto(
     int DurationSeconds,
     IReadOnlyList<ExamStandardScoreDto> Standards);
 
+/// <summary>A printable certificate earned by passing a mock exam.</summary>
+public sealed record CertificateDto(
+    Guid ExamId,
+    string StudentName,
+    Guid SubjectId,
+    string SubjectName,
+    string Grade,
+    double PercentScore,
+    MasteryBand Band,
+    DateTimeOffset IssuedAt);
+
 public sealed record ExamHistoryItemDto(
     Guid ExamId,
     Guid SubjectId,

@@ -35,7 +35,13 @@
                         }
                     </ul>
                 }
-                <button class="btn-secondary mt-4" @onclick="Reset">@T["student.exam.retake"]</button>
+                <div class="result-actions">
+                    @if (_result.PercentScore >= 50)
+                    {
+                        <a class="btn-primary" href="@($"/student/certificate/{_result.ExamId}")">@T["cert.view"]</a>
+                    }
+                    <button class="btn-secondary" @onclick="Reset">@T["student.exam.retake"]</button>
+                </div>
             </section>
         }
         else if (_exam is not null)
@@ -151,6 +157,7 @@
     .result-meta { color: #64748b; font-size: .85rem; margin-top: .2rem; }
     .result-standards { list-style: none; margin: 1rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
     .result-standards li { display: flex; justify-content: space-between; font-size: .85rem; border: 1px solid #f1f5f9; border-radius: .5rem; padding: .4rem .6rem; }
+    .result-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
     .rs-code { font-weight: 700; color: #1e293b; }
     .rs-band { color: #64748b; }
     .history-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
