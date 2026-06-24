@@ -1,31 +1,32 @@
 @page "/admin/content"
 @inject ApiClient Api
+@inject IUiText T
 
-<PageTitle>Content — cerdikMY Admin</PageTitle>
+<PageTitle>@T["admin.content.title"] — cerdikMY Admin</PageTitle>
 
 <AppShell>
     <RoleGuard Roles="@(new[] { UserRole.Admin, UserRole.ContentAdmin })">
-        <h1 class="page-title">Content management</h1>
-        <p class="page-sub mb-6">Publish or unpublish lessons across school-type, language and DLP variants.</p>
+        <h1 class="page-title">@T["admin.content.title"]</h1>
+        <p class="page-sub mb-6">@T["admin.content.sub"]</p>
 
         @if (_loading)
         {
-            <p class="text-slate-500" role="status">Loading content…</p>
+            <p class="text-slate-500" role="status">@T["admin.content.loading"]</p>
         }
         else if (_error is not null)
         {
             <div class="card" role="alert">
                 <p class="text-rose-700">@_error</p>
-                <button class="btn-secondary mt-4" @onclick="LoadAsync">Retry</button>
+                <button class="btn-secondary mt-4" @onclick="LoadAsync">@T["common.retry"]</button>
             </div>
         }
         else
         {
             <AdminDataTable TItem="AdminContentItemDto" Items="_items"
                             SearchText="@(c => $"{c.Title} {c.SubjectName} {c.SchoolType} {c.Language}")"
-                            SearchPlaceholder="Search lessons">
+                            SearchPlaceholder="@T["admin.content.search"]">
                 <HeaderTemplate>
-                    <th>Lesson</th><th>Subject</th><th>Variant</th><th>State</th><th>Blocks</th><th></th>
+                    <th>@T["admin.content.col.lesson"]</th><th>@T["admin.content.col.subject"]</th><th>@T["admin.content.col.variant"]</th><th>@T["admin.content.col.state"]</th><th>@T["admin.content.col.blocks"]</th><th></th>
                 </HeaderTemplate>
                 <RowTemplate Context="c">
                     <td>@c.Title</td>
@@ -36,15 +37,15 @@
                     <td class="text-right">
                         @if (c.State == PublishState.Published)
                         {
-                            <button class="btn-secondary" @onclick="() => TogglePublish(c, false)">Unpublish</button>
+                            <button class="btn-secondary" @onclick="() => TogglePublish(c, false)">@T["admin.content.unpublish"]</button>
                         }
                         else
                         {
-                            <button class="btn-primary" @onclick="() => TogglePublish(c, true)">Publish</button>
+                            <button class="btn-primary" @onclick="() => TogglePublish(c, true)">@T["admin.content.publish"]</button>
                         }
                     </td>
                 </RowTemplate>
-                <EmptyContent><p>No lessons yet.</p></EmptyContent>
+                <EmptyContent><p>@T["admin.content.empty"]</p></EmptyContent>
             </AdminDataTable>
         }
     </RoleGuard>
@@ -71,7 +72,7 @@
         _error = null;
         try { _items = await Api.GetAdminContentAsync(); }
         catch (ApiException ex) { _error = ex.Message; }
-        catch (Exception) { _error = "We couldn't load content. Please try again."; }
+        catch (Exception) { _error = T["admin.content.error"]; }
         finally { _loading = false; }
     }
 
@@ -82,6 +83,6 @@
             await Api.PublishContentAsync(item.LessonId, publish);
             await LoadAsync();
         }
-        catch (Exception) { _error = "We couldn't update that lesson. Please try again."; }
+        catch (Exception) { _error = T["admin.content.update_error"]; }
     }
 }

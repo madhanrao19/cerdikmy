@@ -370,6 +370,48 @@ public sealed class UiText : IUiText
             "导师暂时无法使用，请重试。",
             "ஆசிரியர் இப்போது கிடைக்கவில்லை. மீண்டும் முயற்சிக்கவும்."),
 
+        // Admin — moderation, payments, content
+        ["admin.mod.title"] = T("Moderation queue", "Baris gilir penyederhanaan", "审核队列", "மிதப்படுத்தல் வரிசை"),
+        ["admin.mod.sub"] = T(
+            "Review AI tutor exchanges flagged for a trusted adult.",
+            "Semak perbualan tutor AI yang ditanda untuk orang dewasa yang dipercayai.",
+            "审核被标记需可信成人查看的 AI 导师对话。",
+            "நம்பகமான பெரியவருக்காக கொடியிடப்பட்ட AI ஆசிரியர் உரையாடல்களை மதிப்பாய்வு செய்யுங்கள்."),
+        ["admin.mod.loading"] = T("Loading queue…", "Memuatkan baris gilir…", "正在加载队列…", "வரிசையை ஏற்றுகிறது…"),
+        ["admin.mod.error"] = T("We couldn't load the moderation queue. Please try again.", "Kami tidak dapat memuatkan baris gilir. Sila cuba lagi.", "无法加载审核队列，请重试。", "மிதப்படுத்தல் வரிசையை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["admin.mod.clear"] = T("🎉 Nothing to review — the queue is clear.", "🎉 Tiada apa untuk disemak — baris gilir kosong.", "🎉 没有需要审核的内容——队列已清空。", "🎉 மதிப்பாய்வு செய்ய எதுவும் இல்லை — வரிசை காலியாக உள்ளது."),
+        ["admin.mod.save_error"] = T("We couldn't save your decision. Please try again.", "Kami tidak dapat menyimpan keputusan anda. Sila cuba lagi.", "无法保存您的决定，请重试。", "உங்கள் முடிவைச் சேமிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+
+        ["admin.pay.title"] = T("Payment & webhook logs", "Log pembayaran & webhook", "付款与 webhook 日志", "கட்டணம் & webhook பதிவுகள்"),
+        ["admin.pay.sub"] = T("Reconcile provider webhooks (Billplz, Curlec, Stripe).", "Selaraskan webhook penyedia (Billplz, Curlec, Stripe).", "对账服务商 webhook（Billplz、Curlec、Stripe）。", "வழங்குநர் webhooks ஐ சரிபார்க்கவும் (Billplz, Curlec, Stripe)."),
+        ["admin.pay.loading"] = T("Loading payments…", "Memuatkan pembayaran…", "正在加载付款…", "கட்டணங்களை ஏற்றுகிறது…"),
+        ["admin.pay.error"] = T("We couldn't load payments. Please try again.", "Kami tidak dapat memuatkan pembayaran. Sila cuba lagi.", "无法加载付款，请重试。", "கட்டணங்களை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["admin.pay.search"] = T("Search by provider, id or status", "Cari mengikut penyedia, id atau status", "按服务商、ID 或状态搜索", "வழங்குநர், ஐடி அல்லது நிலை மூலம் தேடவும்"),
+        ["admin.pay.col.provider"] = T("Provider", "Penyedia", "服务商", "வழங்குநர்"),
+        ["admin.pay.col.payment_id"] = T("Payment ID", "ID Pembayaran", "付款 ID", "கட்டண ஐடி"),
+        ["admin.pay.col.amount"] = T("Amount", "Jumlah", "金额", "தொகை"),
+        ["admin.pay.col.processed"] = T("Processed", "Diproses", "处理时间", "செயலாக்கப்பட்டது"),
+        ["admin.pay.empty"] = T("No payments recorded yet.", "Tiada pembayaran direkodkan lagi.", "暂无付款记录。", "இன்னும் கட்டணங்கள் பதிவு செய்யப்படவில்லை."),
+
+        ["admin.content.title"] = T("Content management", "Pengurusan kandungan", "内容管理", "உள்ளடக்க மேலாண்மை"),
+        ["admin.content.sub"] = T(
+            "Publish or unpublish lessons across school-type, language and DLP variants.",
+            "Terbit atau nyahterbit pelajaran merentas jenis sekolah, bahasa dan varian DLP.",
+            "在不同学校类型、语言和 DLP 变体中发布或取消发布课程。",
+            "பள்ளி வகை, மொழி மற்றும் DLP மாறுபாடுகள் முழுவதும் பாடங்களை வெளியிடவும் அல்லது வெளியிடாமல் செய்யவும்."),
+        ["admin.content.loading"] = T("Loading content…", "Memuatkan kandungan…", "正在加载内容…", "உள்ளடக்கத்தை ஏற்றுகிறது…"),
+        ["admin.content.error"] = T("We couldn't load content. Please try again.", "Kami tidak dapat memuatkan kandungan. Sila cuba lagi.", "无法加载内容，请重试。", "உள்ளடக்கத்தை ஏற்ற முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+        ["admin.content.search"] = T("Search lessons", "Cari pelajaran", "搜索课程", "பாடங்களைத் தேடவும்"),
+        ["admin.content.col.lesson"] = T("Lesson", "Pelajaran", "课程", "பாடம்"),
+        ["admin.content.col.subject"] = T("Subject", "Subjek", "科目", "பாடம்"),
+        ["admin.content.col.variant"] = T("Variant", "Varian", "变体", "மாறுபாடு"),
+        ["admin.content.col.state"] = T("State", "Keadaan", "状态", "நிலை"),
+        ["admin.content.col.blocks"] = T("Blocks", "Blok", "区块", "தொகுதிகள்"),
+        ["admin.content.publish"] = T("Publish", "Terbit", "发布", "வெளியிடு"),
+        ["admin.content.unpublish"] = T("Unpublish", "Nyahterbit", "取消发布", "வெளியீட்டை நீக்கு"),
+        ["admin.content.empty"] = T("No lessons yet.", "Tiada pelajaran lagi.", "暂无课程。", "இன்னும் பாடங்கள் இல்லை."),
+        ["admin.content.update_error"] = T("We couldn't update that lesson. Please try again.", "Kami tidak dapat mengemas kini pelajaran itu. Sila cuba lagi.", "无法更新该课程，请重试。", "அந்தப் பாடத்தைப் புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்."),
+
         // Accessibility (landmarks / skip link)
         ["a11y.skip"] = T("Skip to main content", "Langkau ke kandungan utama", "跳到主要内容", "முதன்மை உள்ளடக்கத்திற்குச் செல்"),
         ["a11y.toggle_nav"] = T("Toggle navigation menu", "Togol menu navigasi", "切换导航菜单", "வழிசெலுத்தல் பட்டியலை மாற்று"),
