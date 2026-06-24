@@ -1,8 +1,15 @@
 using Cerdik.Web;
 using Cerdik.Web.Components;
 using Cerdik.Web.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// When the app runs behind a TLS-terminating reverse proxy / tunnel (nginx, Cloudflare Tunnel),
+// the origin is reached over plain HTTP. BEHIND_TLS_PROXY=true makes the app honour the
+// X-Forwarded-* headers (so it knows the real client IP + the original https scheme) and skips
+// origin-side HTTPS redirection/HSTS (TLS is enforced at the edge — redirecting would loop).
+var behindProxy = string.Equals(builder.Configuration["BEHIND_TLS_PROXY"], "true", StringComparison.OrdinalIgnoreCase);
 
 // Razor Components with global InteractiveServer (SignalR) render mode.
 builder.Services.AddRazorComponents()
@@ -43,10 +50,25 @@ builder.Services.AddScoped<IUiText, UiText>();
 
 var app = builder.Build();
 
+// Must run first so every downstream component (logging, auth, the strict CSP) sees the real
+// client IP and the original https scheme.
+if (behindProxy)
+{
+    var forwarded = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1,
+    };
+    // The origin is reachable only via the trusted proxy/tunnel, never publicly.
+    forwarded.KnownNetworks.Clear();
+    forwarded.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwarded);
+}
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    app.UseHsts();
+    if (!behindProxy) app.UseHsts(); // HSTS is set at the edge when behind a TLS proxy.
 }
 
 app.UseRequestLocalization(new Microsoft.AspNetCore.Builder.RequestLocalizationOptions()
@@ -55,7 +77,7 @@ app.UseRequestLocalization(new Microsoft.AspNetCore.Builder.RequestLocalizationO
     .AddSupportedUICultures(UiText.Supported));
 
 app.UseMiddleware<SecurityHeadersMiddleware>();
-app.UseHttpsRedirection();
+if (!behindProxy) app.UseHttpsRedirection(); // the edge serves HTTPS; the origin is plain HTTP.
 app.UseAntiforgery();
 app.MapStaticAssets();
 

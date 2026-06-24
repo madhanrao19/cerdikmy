@@ -4,6 +4,9 @@ This guide deploys the **full cerdikMY stack** (Blazor web, API, Hangfire worker
 SQL Server 2025, MinIO, mailpit) to a single Hostinger Ubuntu VPS using Docker
 Compose behind an nginx reverse proxy with Let's Encrypt TLS.
 
+> **No fixed public IP?** Use a Cloudflare Tunnel instead (TLS at the edge, no inbound
+> ports, no certbot) — see [deployment-cloudflare.md](deployment-cloudflare.md).
+
 The repo ships the assets you need under `infra/hostinger/`:
 
 - `deploy.sh` — idempotent deploy script (pull, install Docker, build, migrate).
