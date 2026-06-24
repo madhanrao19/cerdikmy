@@ -2,6 +2,19 @@ using Cerdik.Domain.Common;
 
 namespace Cerdik.Domain.Entities;
 
+/// <summary>A discount/gift code applied at checkout.</summary>
+public class PromoCode : BaseEntity
+{
+    /// <summary>Stored upper-cased; matched case-insensitively.</summary>
+    public string Code { get; set; } = default!;
+    public int DiscountPercent { get; set; }
+    /// <summary>0 = unlimited.</summary>
+    public int MaxRedemptions { get; set; }
+    public int RedemptionCount { get; set; }
+    public DateTimeOffset? ExpiresAt { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
 /// <summary>A household subscription to a plan.</summary>
 public class Subscription : BaseEntity
 {

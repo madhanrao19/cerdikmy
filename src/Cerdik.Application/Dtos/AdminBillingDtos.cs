@@ -45,8 +45,15 @@ public sealed record CohortRow(string Key, int Students, double AvgMastery, int 
 public sealed record WebhookLogDto(Guid PaymentId, PaymentProvider Provider, string ProviderPaymentId, PaymentStatus Status, int AmountCents, string Currency, DateTimeOffset? ProcessedAt, DateTimeOffset CreatedAt);
 
 // ---- Billing ----
-public sealed record CheckoutSessionRequest(Guid HouseholdId, string PlanCode, string ReturnUrl);
+public sealed record CheckoutSessionRequest(Guid HouseholdId, string PlanCode, string ReturnUrl, string? PromoCode = null);
 public sealed record CheckoutSessionDto(string Provider, string CheckoutUrl, string ProviderSessionId);
+
+// ---- Promo / gift codes ----
+public sealed record CreatePromoCodeRequest(string Code, int DiscountPercent, int MaxRedemptions, DateTimeOffset? ExpiresAt);
+public sealed record PromoCodeDto(Guid Id, string Code, int DiscountPercent, int MaxRedemptions, int RedemptionCount, DateTimeOffset? ExpiresAt, bool IsActive);
+public sealed record ValidatePromoRequest(string Code);
+/// <summary>Reason is null when valid; otherwise a code: "invalid" | "expired" | "exhausted".</summary>
+public sealed record PromoValidationDto(bool Valid, int DiscountPercent, string? Reason);
 
 public sealed record SubscriptionDto(
     Guid Id,
