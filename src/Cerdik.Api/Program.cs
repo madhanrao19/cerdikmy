@@ -12,6 +12,7 @@ using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -21,6 +22,11 @@ using Serilog;
 EnvLoader.Load();
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Behind a TLS-terminating reverse proxy / tunnel (nginx, Cloudflare Tunnel) the origin is plain
+// HTTP. BEHIND_TLS_PROXY=true honours X-Forwarded-* so the real client IP (rate limiting, audit)
+// and the original https scheme (Secure cookies, absolute URLs) are recovered at the origin.
+var behindProxy = string.Equals(builder.Configuration["BEHIND_TLS_PROXY"], "true", StringComparison.OrdinalIgnoreCase);
 
 // Don't advertise the server stack.
 builder.WebHost.ConfigureKestrel(o => o.AddServerHeader = false);
@@ -148,6 +154,21 @@ if (args.Contains("--migrate") || args.Contains("--seed"))
 
 // ---- Fail fast on dangerous misconfiguration (weak/empty JWT signing keys) ----
 StartupValidation.ValidateOrThrow(app.Services, app.Environment, app.Logger);
+
+// First in the pipeline so correlation/logging, the rate limiter (partitions by client IP) and
+// auth all see the real client IP + original https scheme rather than the proxy's.
+if (behindProxy)
+{
+    var forwarded = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = 1,
+    };
+    // The origin is reachable only via the trusted proxy/tunnel, never publicly.
+    forwarded.KnownNetworks.Clear();
+    forwarded.KnownProxies.Clear();
+    app.UseForwardedHeaders(forwarded);
+}
 
 app.UseMiddleware<CorrelationMiddleware>();
 app.UseSerilogRequestLogging();
