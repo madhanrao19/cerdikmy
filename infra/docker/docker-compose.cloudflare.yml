@@ -60,6 +60,10 @@ services:
       BEHIND_TLS_PROXY: "true"
       NEXT_PUBLIC_APP_URL: "${NEXT_PUBLIC_APP_URL:-https://app.example.my}"
       SESSION_COOKIE_DOMAIN: "${SESSION_COOKIE_DOMAIN:-app.example.my}"
+      # Server-side web -> API calls stay inside the stack. Pin to the api service
+      # literally (no ${...} interpolation) so a host .env API_BASE_URL — e.g. the
+      # dev default http://localhost:5081 — can't leak in and break the web container.
+      API_BASE_URL: "http://api:8080"
 
   api:
     environment:
